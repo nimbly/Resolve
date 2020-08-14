@@ -5,7 +5,7 @@ Resolve is a dependency resolver able to call or make new instances with the aid
 ## Installation
 
 ```bash
-composer require nimbly/plumb
+composer require nimbly/resolve
 ```
 
 ## Requirements
@@ -14,15 +14,17 @@ Resolve needs a PSR-11 compliant container instance and does not come bundled wi
 
 You can try one of these:
 
-* nimbly/carton
-*  phpdi/di
+* [php-di/php-di](https://github.com/PHP-DI/PHP-DI)
+* [league/container](https://github.com/thephpleague/container)
+* [aura/di](https://github.com/auraphp/Aura.Di)
+* [nimbly/carton](https://github.com/nimbly/carton)
 
 ## Usage
 
 Instantiate Resolve with your container instance.
 
 ```php
-$plumb = new Resolve($container);
+$resolve = new Resolve($container);
 ```
 
 ## Call
@@ -36,7 +38,7 @@ If a dependency cannot be resolved from the container or optional parameters, Re
 ### Instance method
 
 ```php
-$plumb->call(
+$resolve->call(
     [new FooHandler, "findById"],
     [
         ServerRequestInteface::class => $serverRequest,
@@ -47,7 +49,7 @@ $plumb->call(
 ### Static method
 
 ```php
-$plumb->call(
+$resolve->call(
     [FooHandler::class, "findById"],
     [
         ServerRequestInteface::class => $serverRequest,
@@ -59,7 +61,7 @@ $plumb->call(
 ### Invokable
 
 ```php
-$plumb->call(
+$resolve->call(
     new FooHandler,
     [
         ServerRequestInteface::class => $serverRequest,
@@ -71,7 +73,7 @@ $plumb->call(
 ### Function
 
 ```php
-$plumb->call(
+$resolve->call(
     "\Handlers\Foo\findById",
     [
         ServerRequestInteface::class => $serverRequest,
@@ -85,5 +87,5 @@ $plumb->call(
 The `make` method can instantiate any class you may need and resolve the constructor dependencies automatically from either the container instance or the optional parameters you provide.
 
 ```php
-$instance = $plumb->make(FooHandler::class);
+$instance = $resolve->make(FooHandler::class);
 ```

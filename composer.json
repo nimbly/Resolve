@@ -1,24 +1,25 @@
 {
-    "name": "nimbly/resolve",
-    "description": "Dependency injection library.",
-    "type": "library",
-    "require": {
-        "psr/container": "^1.0",
-        "php": "*"
-    },
-    "require-dev": {
-        "phpunit/phpunit": "^9.0",
-        "vimeo/psalm": "^3.10",
-        "nimbly/carton": "^1.0",
-        "symfony/var-dumper": "^5.1",
-        "nimbly/capsule": "^1.0"
-    },
-    "license": "MIT",
-    "authors": [
-        {
-            "name": "Brent Scheffler",
-            "email": "brent@brentscheffler.com"
-        }
+	"name": "nimbly/resolve",
+	"description": "A simple PSR-11 compliant dependency injector",
+	"type": "library",
+	"require": {
+		"php": ">=7.2",
+		"psr/container": "^1.0"
+	},
+	"require-dev": {
+		"phpunit/phpunit": "^9.0",
+		"vimeo/psalm": "^3.10",
+		"nimbly/carton": "^1.0",
+		"symfony/var-dumper": "^5.1",
+		"nimbly/capsule": "^1.0",
+		"php-coveralls/php-coveralls": "^2.2"
+	},
+	"license": "MIT",
+	"authors": [
+		{
+			"name": "Brent Scheffler",
+			"email": "brent@brentscheffler.com"
+		}
 	],
 	"autoload": {
 		"psr-4": {

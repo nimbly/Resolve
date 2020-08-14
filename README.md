@@ -31,6 +31,13 @@ Instantiate Resolve with or without a container instance.
 $resolve = new Resolve($container);
 ```
 
+You can also attach the container separately with the `setContainer` method.
+
+```php
+$resolve = new Resolve;
+$resolve->setContainer($container);
+```
+
 ## Make
 
 The `make` method can instantiate any class you may need and resolve the constructor dependencies automatically from either the container instance or the optional parameters you provide.

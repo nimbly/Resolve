@@ -28,6 +28,17 @@ class Resolve
 	}
 
 	/**
+	 * Set the ContainerInterface instance.
+	 *
+	 * @param ContainerInterface $container
+	 * @return void
+	 */
+	public function setContainer(ContainerInterface $container): void
+	{
+		$this->container = $container;
+	}
+
+	/**
 	 * Call a callable with optional given parameters.
 	 *
 	 * @param callable $callable

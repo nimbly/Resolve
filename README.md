@@ -1,6 +1,6 @@
 # Resolve
 
-Resolve is a dependency resolver able to call or make new instances with the aid of a PSR-11 compliant container.
+Resolve is a dependency resolver able to call functions or methods or make new instances of classes with the aid of a PSR-11 compliant container.
 
 ## Installation
 
@@ -10,7 +10,11 @@ composer require nimbly/resolve
 
 ## Requirements
 
-Resolve needs a PSR-11 compliant container instance and does not come bundled with one.
+* PHP >= 7.2
+
+## Container support
+
+Resolve can optionally be passed a PSR-11 container instance.
 
 You can try one of these:
 
@@ -21,10 +25,18 @@ You can try one of these:
 
 ## Usage
 
-Instantiate Resolve with your container instance.
+Instantiate Resolve with or without a container instance.
 
 ```php
 $resolve = new Resolve($container);
+```
+
+## Make
+
+The `make` method can instantiate any class you may need and resolve the constructor dependencies automatically from either the container instance or the optional parameters you provide.
+
+```php
+$instance = $resolve->make(FooHandler::class);
 ```
 
 ## Call
@@ -80,12 +92,4 @@ $resolve->call(
         "id" => "3122accd-e640-4c4c-b299-ccad074cb077"
     ]
 );
-```
-
-## Make
-
-The `make` method can instantiate any class you may need and resolve the constructor dependencies automatically from either the container instance or the optional parameters you provide.
-
-```php
-$instance = $resolve->make(FooHandler::class);
 ```

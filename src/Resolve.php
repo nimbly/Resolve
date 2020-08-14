@@ -13,7 +13,7 @@ class Resolve
 	/**
 	 * ContainerInterface instance.
 	 *
-	 * @var ContainerInterface
+	 * @var ContainerInterface|null
 	 */
 	protected $container;
 
@@ -22,7 +22,7 @@ class Resolve
 	 *
 	 * @param ContainerInterface $container
 	 */
-	public function __construct(ContainerInterface $container)
+	public function __construct(ContainerInterface $container = null)
 	{
 		$this->container = $container;
 	}
@@ -32,6 +32,7 @@ class Resolve
 	 *
 	 * @param callable $callable
 	 * @param array<string,mixed> $parameters
+	 * @throws CallableResolutionException
 	 * @return mixed
 	 */
 	public function call(callable $callable, array $parameters = [])
@@ -58,7 +59,7 @@ class Resolve
 		}
 
 		else {
-			throw new \Exception("Resolve does not have support for this type of callable.");
+			throw new CallableResolutionException("Resolve does not have support for this type of callable.");
 		}
 
 		$args = $this->resolveParameters(
@@ -77,12 +78,13 @@ class Resolve
 	 *
 	 * @param string $class_name
 	 * @param array<string,mixed> $parameters Additional parameters to supply to the constructor.
+	 * @throws ClassResolutionException
 	 * @return object
 	 */
 	public function make(string $class_name, array $parameters = []): object
 	{
 		if( !\class_exists($class_name) ){
-			throw new \Exception("Class \"{$class_name}\" does not exist.");
+			throw new ClassResolutionException("Class \"{$class_name}\" does not exist.");
 		}
 
 		// Do some reflection to determine constructor parameters
@@ -108,7 +110,8 @@ class Resolve
 	 *
 	 * @param array<ReflectionParameter> $reflectionParameters
 	 * @param array<string,mixed> $parameters
-	 * @return array
+	 * @throws ParameterResolutionException
+	 * @return array<mixed>
 	 */
 	protected function resolveParameters(array $reflectionParameters, array $parameters = []): array
 	{
@@ -129,7 +132,8 @@ class Resolve
 				// Check container and parameters for a match by type.
 				if( $parameterType && !$parameterType->isBuiltin() ) {
 
-					if( $this->container->has($parameterType->getName()) ){
+					if( $this->container &&
+						$this->container->has($parameterType->getName()) ){
 						return $this->container->get($parameterType->getName());
 					}
 
@@ -167,7 +171,7 @@ class Resolve
 					}
 				}
 
-				throw new \Exception("Cannot resolve parameter \"{$parameterName}\".");
+				throw new ParameterResolutionException("Cannot resolve parameter \"{$parameterName}\".");
 			},
 			$reflectionParameters
 		);

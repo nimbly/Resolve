@@ -48,37 +48,10 @@ class Resolve
 	 */
 	public function call(callable $callable, array $parameters = [])
 	{
-		if( \is_array($callable) ){
-			[$class, $method] = $callable;
-
-			/** @psalm-suppress ArgumentTypeCoercion */
-			$reflectionClass = new ReflectionClass($class);
-			$reflectionMethod = $reflectionClass->getMethod($method);
-			$reflectionParameters = $reflectionMethod->getParameters();
-		}
-
-		elseif( \is_object($callable) && \method_exists($callable, "__invoke")) {
-
-			$reflectionObject = new ReflectionObject($callable);
-			$reflectionMethod = $reflectionObject->getMethod("__invoke");
-			$reflectionParameters = $reflectionMethod->getParameters();
-		}
-
-		elseif( \is_string($callable)) {
-			$reflectionFunction = new ReflectionFunction($callable);
-			$reflectionParameters = $reflectionFunction->getParameters();
-		}
-
-		else {
-			throw new CallableResolutionException("Resolve does not have support for this type of callable.");
-		}
-
-		$args = $this->resolveParameters(
-			$reflectionParameters,
-			$parameters
+		return \call_user_func_array(
+			$callable,
+			$this->getCallableArguments($callable, $parameters)
 		);
-
-		return \call_user_func_array($callable, $args);
 	}
 
 	/**
@@ -108,12 +81,53 @@ class Resolve
 			return $reflectionClass->newInstance();
 		}
 
-		$args = $this->resolveParameters(
+		$args = $this->resolveReflectionParameters(
 			$constructor->getParameters(),
 			$parameters
 		);
 
 		return $reflectionClass->newInstanceArgs($args);
+	}
+
+	/**
+	 * Given a callable, get its arguments resolved using the container and optionally any
+	 * user supplied parameters.
+	 *
+	 * @param callable $callable
+	 * @param array $parameters
+	 * @return array<mixed>
+	 */
+	public function getCallableArguments(callable $callable, array $parameters = []): array
+	{
+		if( \is_array($callable) ){
+			[$class, $method] = $callable;
+
+			/** @psalm-suppress ArgumentTypeCoercion */
+			$reflectionClass = new ReflectionClass($class);
+			$reflectionMethod = $reflectionClass->getMethod($method);
+			$reflectionParameters = $reflectionMethod->getParameters();
+		}
+
+		elseif( \is_object($callable) && \method_exists($callable, "__invoke")) {
+
+			$reflectionObject = new ReflectionObject($callable);
+			$reflectionMethod = $reflectionObject->getMethod("__invoke");
+			$reflectionParameters = $reflectionMethod->getParameters();
+		}
+
+		elseif( \is_string($callable)) {
+			$reflectionFunction = new ReflectionFunction($callable);
+			$reflectionParameters = $reflectionFunction->getParameters();
+		}
+
+		else {
+			throw new CallableResolutionException("Resolve does not have support for this type of callable.");
+		}
+
+		return $this->resolveReflectionParameters(
+			$reflectionParameters,
+			$parameters
+		);
 	}
 
 	/**
@@ -124,7 +138,7 @@ class Resolve
 	 * @throws ParameterResolutionException
 	 * @return array<mixed>
 	 */
-	protected function resolveParameters(array $reflectionParameters, array $parameters = []): array
+	protected function resolveReflectionParameters(array $reflectionParameters, array $parameters = []): array
 	{
 		return \array_map(
 			/**

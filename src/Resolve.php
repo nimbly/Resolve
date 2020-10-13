@@ -84,8 +84,8 @@ class Resolve
 	/**
 	 * Make an instance of the given class.
 	 *
-	 * Parameters is a key => value pair of parameters that will be injected into
-	 * the constructor if they cannot be resolved.
+	 * Parameters is a key => value pair array of parameters that will be used during
+	 * dependency resolution.
 	 *
 	 * @param string $class_name
 	 * @param array<string,mixed> $parameters Additional parameters to supply to the constructor.

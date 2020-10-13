@@ -131,6 +131,41 @@ class Resolve
 	}
 
 	/**
+	 * Try to make something callable.
+	 *
+	 * Supports:
+	 *  - Full\Qualified\Namespace\Classname@Method
+	 *  - Full\Qualified\Namespace\Classname (if class has __invoke() method.)
+	 *
+	 * @param string|callable $callable
+	 * @return callable
+	 */
+	public function makeCallable($callable): callable
+	{
+		if( \is_callable($callable) ){
+			return $callable;
+		}
+
+		if( \preg_match("/^(.+)@(.+)$/", $callable, $match) ){
+			return [
+				$this->make($match[1]),
+				$match[2]
+			];
+		}
+
+		if( \is_string($callable) &&
+			\class_exists($callable) ){
+			$invokable = $this->make($callable);
+
+			if( \is_callable($invokable) ){
+				return $invokable;
+			}
+		}
+
+		throw new CallableResolutionException("Resolve does not have support for this type of callable.");
+	}
+
+	/**
 	 * Resolve parameters.
 	 *
 	 * @param array<ReflectionParameter> $reflectionParameters

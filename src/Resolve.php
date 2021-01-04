@@ -94,7 +94,7 @@ class Resolve
 	 * user supplied parameters.
 	 *
 	 * @param callable $callable
-	 * @param array $parameters
+	 * @param array<string,mixed> $parameters
 	 * @return array<mixed>
 	 */
 	public function getCallableArguments(callable $callable, array $parameters = []): array
@@ -153,8 +153,7 @@ class Resolve
 			];
 		}
 
-		if( \is_string($callable) &&
-			\class_exists($callable) ){
+		if( \is_string($callable) && \class_exists($callable) ){
 			$invokable = $this->make($callable);
 
 			if( \is_callable($invokable) ){

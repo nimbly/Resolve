@@ -80,7 +80,10 @@ class ResolveCallTest extends TestCase
 
 		$value = $plumb->call(
 			"strtolower",
-			["str" => "PLUMB"]
+			[
+				"str" => "PLUMB", // PHP < 8.0 support
+				"string" => "PLUMB" // PHP >= 8.0 support
+			]
 		);
 
 		$this->assertEquals(

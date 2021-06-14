@@ -2,10 +2,10 @@
 
 use Carton\Container;
 use PHPUnit\Framework\TestCase;
-use Resolve\Resolve;
-use Resolve\Tests\Fixtures\InvokableClass;
-use Resolve\Tests\Fixtures\NonConstructorClass;
-use Resolve\Tests\Fixtures\StaticMethodClass;
+use Nimbly\Resolve\Resolve;
+use Nimbly\Resolve\Tests\Fixtures\InvokableClass;
+use Nimbly\Resolve\Tests\Fixtures\NonConstructorClass;
+use Nimbly\Resolve\Tests\Fixtures\StaticMethodClass;
 
 /**
  * @covers Resolve\Resolve

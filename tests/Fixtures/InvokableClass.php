@@ -1,6 +1,6 @@
 <?php
 
-namespace Resolve\Tests\Fixtures;
+namespace Nimbly\Resolve\Tests\Fixtures;
 
 use DateTime;
 

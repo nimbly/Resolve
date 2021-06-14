@@ -1,6 +1,6 @@
 <?php
 
-namespace Resolve;
+namespace Nimbly\Resolve;
 
 use Psr\Container\ContainerInterface;
 use ReflectionClass;

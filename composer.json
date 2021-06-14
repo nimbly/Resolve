@@ -22,12 +22,12 @@
 	],
 	"autoload": {
 		"psr-4": {
-			"Resolve\\": "src\/"
+			"Nimbly\\Resolve\\": "src\/"
 		}
 	},
 	"autoload-dev": {
 		"psr-4": {
-			"Resolve\\Tests\\": "tests\/"
+			"Nimbly\\Resolve\\Tests\\": "tests\/"
 		}
 	}
 }

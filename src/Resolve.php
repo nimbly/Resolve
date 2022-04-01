@@ -6,6 +6,7 @@ use Nimbly\Resolve\ClassResolutionException;
 use Nimbly\Resolve\ParameterResolutionException;
 use Psr\Container\ContainerInterface;
 use ReflectionClass;
+use ReflectionException;
 use ReflectionFunction;
 use ReflectionObject;
 use ReflectionParameter;
@@ -208,10 +209,20 @@ class Resolve
 			return $this->container->get($class_name);
 		}
 
-		/**
-		 * @psalm-suppress ArgumentTypeCoercion
-		 */
-		$reflectionClass = new ReflectionClass($class_name);
+		try {
+
+			/**
+		 	* @psalm-suppress ArgumentTypeCoercion
+		 	*/
+			$reflectionClass = new ReflectionClass($class_name);
+		}
+		catch( ReflectionException $reflectionException ){
+			throw new ClassResolutionException(
+				$reflectionException->getMessage(),
+				$reflectionException->getCode(),
+				$reflectionException
+			);
+		}
 
 		if( $reflectionClass->isInterface() || $reflectionClass->isAbstract() ){
 			throw new ClassResolutionException("Cannot make an instance of an Interface or Abstract.");

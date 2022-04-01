@@ -3,12 +3,9 @@
 use Carton\Container;
 use PHPUnit\Framework\TestCase;
 use Nimbly\Resolve\Resolve;
-use Nimbly\Resolve\Tests\Fixtures\InvokableClass;
-use Nimbly\Resolve\Tests\Fixtures\NonConstructorClass;
-use Nimbly\Resolve\Tests\Fixtures\StaticMethodClass;
 
 /**
- * @covers Resolve\Resolve
+ * @covers Nimbly\Resolve\Resolve
  */
 class ResolveMakeTest extends TestCase
 {
@@ -22,5 +19,4 @@ class ResolveMakeTest extends TestCase
 
 		$plumb->make("NonExistentClass");
 	}
-
 }

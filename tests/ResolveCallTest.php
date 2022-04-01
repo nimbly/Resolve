@@ -8,7 +8,7 @@ use Nimbly\Resolve\Tests\Fixtures\NonConstructorClass;
 use Nimbly\Resolve\Tests\Fixtures\StaticMethodClass;
 
 /**
- * @covers Resolve\Resolve
+ * @covers Nimbly\Resolve\Resolve
  */
 class ResolveCallTest extends TestCase
 {

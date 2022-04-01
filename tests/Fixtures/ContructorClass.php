@@ -6,20 +6,10 @@ use DateTime;
 
 class ConstructorClass
 {
-	/**
-	 * @var string
-	 */
-	protected $name;
-
-	/**
-	 * @var DateTime
-	 */
-	protected $start_at;
-
-	public function __construct(string $name, DateTime $start_at)
+	public function __construct(
+		protected string $name,
+		protected DateTime $start_at)
 	{
-		$this->name = $name;
-		$this->start_at = $start_at;
 	}
 
 	public function getEvent(): array

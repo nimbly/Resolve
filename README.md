@@ -10,11 +10,11 @@ composer require nimbly/resolve
 
 ## Requirements
 
-* PHP >= 7.2
+* PHP >= 8.0
 
 ## Container support
 
-Resolve can optionally be passed a PSR-11 container instance.
+Resolve can optionally be passed a PSR-11 Container instance but does not ship with an implementation.
 
 You can try one of these:
 
@@ -31,24 +31,29 @@ Instantiate Resolve with or without a container instance.
 $resolve = new Resolve($container);
 ```
 
-You can also attach the container separately with the `setContainer` method.
-
-```php
-$resolve = new Resolve;
-$resolve->setContainer($container);
-```
-
 ## Make
 
 The `make` method can instantiate any class you may need and resolve the constructor dependencies automatically from either the container instance or the optional parameters you provide.
 
 ```php
-$instance = $resolve->make(FooHandler::class);
+$instance = $resolve->make(FooHandler::class, ["additional_parameter" => "Foo"]);
+```
+
+## Make a thing callable
+
+Often you would like to make something that represents a callable into an actual `callable` type. You can pass a string that represents a callable or an actual `callable` into the `makeCallable` method.
+
+```php
+$invokable = $resolve->makeCallable(Foo::class);
+```
+
+```php
+$instance_method = $resolve->makeCallable("\Http\Handlers\FooHandler@createNewFoo");
 ```
 
 ## Call
 
-The `call` method will call any callable you pass in, collect the dependencies of that callable from either the container or the optional set of parameters passed, and invoke that callable.
+The `call` method will call any `callable` you pass in, collect the dependencies of that callable from either the container or the optional set of parameters passed, and invoke that `callable`.
 
 If a dependency cannot be resolved from the container or optional parameters, Resolve will attempt to `make` one for you automatically.
 
@@ -58,22 +63,22 @@ If a dependency cannot be resolved from the container or optional parameters, Re
 
 ```php
 $resolve->call(
-    [new FooHandler, "findById"],
-    [
-        ServerRequestInteface::class => $serverRequest,
-        "id" => "3122accd-e640-4c4c-b299-ccad074cb077"
-    ]
+	[new FooHandler, "findById"],
+	[
+		ServerRequestInteface::class => $serverRequest,
+		"id" => "3122accd-e640-4c4c-b299-ccad074cb077"
+	]
 );
 ```
 ### Static method
 
 ```php
 $resolve->call(
-    [FooHandler::class, "findById"],
-    [
-        ServerRequestInteface::class => $serverRequest,
-        "id" => "3122accd-e640-4c4c-b299-ccad074cb077"
-    ]
+	[FooHandler::class, "findById"],
+	[
+		ServerRequestInteface::class => $serverRequest,
+		"id" => "3122accd-e640-4c4c-b299-ccad074cb077"
+	]
 );
 ```
 
@@ -81,11 +86,11 @@ $resolve->call(
 
 ```php
 $resolve->call(
-    new FooHandler,
-    [
-        ServerRequestInteface::class => $serverRequest,
-        "id" => "3122accd-e640-4c4c-b299-ccad074cb077"
-    ]
+	new FooHandler,
+	[
+		ServerRequestInteface::class => $serverRequest,
+		"id" => "3122accd-e640-4c4c-b299-ccad074cb077"
+	]
 );
 ```
 
@@ -93,10 +98,10 @@ $resolve->call(
 
 ```php
 $resolve->call(
-    "\Handlers\Foo\findById",
-    [
-        ServerRequestInteface::class => $serverRequest,
-        "id" => "3122accd-e640-4c4c-b299-ccad074cb077"
-    ]
+	"\Handlers\Foo\findById",
+	[
+		ServerRequestInteface::class => $serverRequest,
+		"id" => "3122accd-e640-4c4c-b299-ccad074cb077"
+	]
 );
 ```

@@ -2,6 +2,8 @@
 
 namespace Nimbly\Resolve;
 
+use Nimbly\Resolve\ClassResolutionException;
+use Nimbly\Resolve\ParameterResolutionException;
 use Psr\Container\ContainerInterface;
 use ReflectionClass;
 use ReflectionFunction;
@@ -10,169 +12,61 @@ use ReflectionParameter;
 
 class Resolve
 {
-	/**
-	 * ContainerInterface instance.
-	 *
-	 * @var ContainerInterface|null
-	 */
-	protected $container;
-
-	/**
-	 * Resolve constructor.
-	 *
-	 * @param ContainerInterface $container
-	 */
-	public function __construct(ContainerInterface $container = null)
+	public function __construct(
+		protected ?ContainerInterface $container = null
+	)
 	{
-		$this->container = $container;
 	}
 
 	/**
-	 * Set the ContainerInterface instance.
+	 * Get the reflection parameters for a callable.
 	 *
-	 * @param ContainerInterface $container
-	 * @return void
+	 * @param callable $handler
+	 * @throws ParameterResolutionException
+	 * @return array<ReflectionParameter>
 	 */
-	public function setContainer(ContainerInterface $container): void
+	public function getReflectionParametersForCallable(callable $handler): array
 	{
-		$this->container = $container;
-	}
+		if( \is_array($handler) ){
+			[$class, $method] = $handler;
 
-	/**
-	 * Call a callable with optional given parameters.
-	 *
-	 * @param callable $callable
-	 * @param array<string,mixed> $parameters
-	 * @throws CallableResolutionException
-	 * @return mixed
-	 */
-	public function call(callable $callable, array $parameters = [])
-	{
-		return \call_user_func_array(
-			$callable,
-			$this->getCallableArguments($callable, $parameters)
-		);
-	}
-
-	/**
-	 * Make an instance of the given class.
-	 *
-	 * Parameters is a key => value pair array of parameters that will be used during
-	 * dependency resolution.
-	 *
-	 * @param string $class_name
-	 * @param array<string,mixed> $parameters Additional parameters to supply to the constructor.
-	 * @throws ClassResolutionException
-	 * @return object
-	 */
-	public function make(string $class_name, array $parameters = []): object
-	{
-		if( !\class_exists($class_name) ){
-			throw new ClassResolutionException("Class \"{$class_name}\" does not exist.");
-		}
-
-		// Do some reflection to determine constructor parameters
-		/** @psalm-suppress ArgumentTypeCoercion */
-		$reflectionClass = new ReflectionClass($class_name);
-
-		$constructor = $reflectionClass->getConstructor();
-
-		if( empty($constructor) ){
-			return $reflectionClass->newInstance();
-		}
-
-		$args = $this->resolveReflectionParameters(
-			$constructor->getParameters(),
-			$parameters
-		);
-
-		return $reflectionClass->newInstanceArgs($args);
-	}
-
-	/**
-	 * Given a callable, get its arguments resolved using the container and optionally any
-	 * user supplied parameters.
-	 *
-	 * @param callable $callable
-	 * @param array<string,mixed> $parameters
-	 * @return array<mixed>
-	 */
-	public function getCallableArguments(callable $callable, array $parameters = []): array
-	{
-		if( \is_array($callable) ){
-			[$class, $method] = $callable;
-
-			/** @psalm-suppress ArgumentTypeCoercion */
 			$reflectionClass = new ReflectionClass($class);
-			$reflectionMethod = $reflectionClass->getMethod($method);
-			$reflectionParameters = $reflectionMethod->getParameters();
+			$reflector = $reflectionClass->getMethod($method);
 		}
 
-		elseif( \is_object($callable) && \method_exists($callable, "__invoke")) {
+		elseif( \is_object($handler) && \method_exists($handler, "__invoke")) {
 
-			$reflectionObject = new ReflectionObject($callable);
-			$reflectionMethod = $reflectionObject->getMethod("__invoke");
-			$reflectionParameters = $reflectionMethod->getParameters();
+			$reflectionObject = new ReflectionObject($handler);
+			$reflector = $reflectionObject->getMethod("__invoke");
 		}
 
-		elseif( \is_string($callable)) {
-			$reflectionFunction = new ReflectionFunction($callable);
-			$reflectionParameters = $reflectionFunction->getParameters();
+		elseif( \is_string($handler)) {
+			$reflector = new ReflectionFunction($handler);
 		}
 
 		else {
-			throw new CallableResolutionException("Resolve does not have support for this type of callable.");
+			throw new ParameterResolutionException("Given handler is not callable.");
 		}
 
-		return $this->resolveReflectionParameters(
-			$reflectionParameters,
-			$parameters
-		);
+		return $reflector->getParameters();
 	}
 
 	/**
-	 * Try to make something callable.
+	 * Resolve an array of reflection parameters into an array of concrete instances/values.
 	 *
-	 * Supports:
-	 *  - Full\Qualified\Namespace\Classname@Method
-	 *  - Full\Qualified\Namespace\Classname (if class has __invoke() method.)
+	 * This will resolve dependencies from:
+	 * 		o The ContainerInterface instance (if any)
+	 * 		o The $parameters array
+	 * 		o Try to recursively make() new instances
+	 * 		o Default values provided by method/function signature
 	 *
-	 * @param string|callable $callable
-	 * @return callable
-	 */
-	public function makeCallable($callable): callable
-	{
-		if( \is_callable($callable) ){
-			return $callable;
-		}
-
-		if( \preg_match("/^(.+)@(.+)$/", $callable, $match) ){
-			return [
-				$this->make($match[1]),
-				$match[2]
-			];
-		}
-
-		if( \is_string($callable) && \class_exists($callable) ){
-			$invokable = $this->make($callable);
-
-			if( \is_callable($invokable) ){
-				return $invokable;
-			}
-		}
-
-		throw new CallableResolutionException("Resolve does not have support for this type of callable.");
-	}
-
-	/**
-	 * Resolve parameters.
-	 *
-	 * @param array<ReflectionParameter> $reflectionParameters
-	 * @param array<string,mixed> $parameters
+	 * @param array<ReflectionParameter> $reflection_parameters
+	 * @param array<string,mixed> $parameters Additional named parameters and values to use during dependency resolution.
 	 * @throws ParameterResolutionException
-	 * @return array<mixed>
+	 * @throws ClassResolutionException
+	 * @return array<mixed> All resolved parameters in the order they appeared in $reflection_parameters
 	 */
-	protected function resolveReflectionParameters(array $reflectionParameters, array $parameters = []): array
+	public function resolveReflectionParameters(array $reflection_parameters, array $parameters = []): array
 	{
 		return \array_map(
 			/**
@@ -180,27 +74,33 @@ class Resolve
 			 */
 			function(ReflectionParameter $reflectionParameter) use ($parameters) {
 
-				$parameterName = $reflectionParameter->getName();
-				$parameterType = $reflectionParameter->getType();
+				$parameter_name = $reflectionParameter->getName();
 
-				// Check parameters for a match by name.
-				if( \array_key_exists($parameterName, $parameters) ){
-					return $parameters[$parameterName];
+				// Check user arguments for a match by name.
+				if( \array_key_exists($parameter_name, $parameters) ){
+					return $parameters[$parameter_name];
 				}
 
-				// Check container and parameters for a match by type.
-				if( $parameterType && !$parameterType->isBuiltin() ) {
+				$parameter_type = $reflectionParameter->getType();
 
-					if( $this->container &&
-						$this->container->has($parameterType->getName()) ){
-						return $this->container->get($parameterType->getName());
+				if( $parameter_type instanceof \ReflectionNamedType === false ) {
+					throw new ParameterResolutionException("Cannot resolve union or intersection types");
+				}
+
+				/**
+				 * Check container and parameters for a match by type.
+				 */
+				if( !$parameter_type->isBuiltin() ) {
+
+					if( $this->container && $this->container->has($parameter_type->getName()) ){
+						return $this->container->get($parameter_type->getName());
 					}
 
 					// Try to find in the parameters supplied
 					$match = \array_filter(
 						$parameters,
-						function($parameter) use ($parameterType) {
-							$parameter_type_name = $parameterType->getName();
+						function($parameter) use ($parameter_type): bool {
+							$parameter_type_name = $parameter_type->getName();
 							return $parameter instanceof $parameter_type_name;
 						}
 					);
@@ -211,28 +111,123 @@ class Resolve
 						];
 					}
 
-					/**
-					 * @psalm-suppress ArgumentTypeCoercion
-					 */
-					return $this->make($parameterType->getName(), $parameters);
+					try {
+
+						return $this->make(
+							$parameter_type->getName(),
+							$parameters
+						);
+					}
+					catch( \Exception $exception ){}
 				}
 
-				// No type or the type is a primitive (built in)
-				if( empty($parameterType) || $parameterType->isBuiltin() ){
-
-					// Does parameter offer a default value?
-					if( $reflectionParameter->isDefaultValueAvailable() ){
-						return $reflectionParameter->getDefaultValue();
-					}
-
-					elseif( $reflectionParameter->allowsNull() ){
-						return null;
-					}
+				/**
+				 * If a default value is defined, use that, including a null value.
+				 */
+				if( $reflectionParameter->isDefaultValueAvailable() ){
+					return $reflectionParameter->getDefaultValue();
+				}
+				elseif( $reflectionParameter->allowsNull() ){
+					return null;
 				}
 
-				throw new ParameterResolutionException("Cannot resolve parameter \"{$parameterName}\".");
+				if( !empty($exception) ){
+					throw $exception;
+				}
+
+				throw new ParameterResolutionException("Cannot resolve parameter \"{$parameter_name}\".");
 			},
-			$reflectionParameters
+			$reflection_parameters
 		);
+	}
+
+	/**
+	 * Try to make a thing callable.
+	 *
+	 * You can pass something that PHP considers "callable" OR a string that represents
+	 * a callable in the format: \Fully\Qualiafied\Namespace@methodName.
+	 *
+	 * @param string|callable $thing
+	 * @throws ParameterResolutionException
+	 * @throws ClassResolutionException
+	 * @throws CallableResolutionException
+	 * @return callable
+	 */
+	public function makeCallable(string|callable $thing): callable
+	{
+		if( \is_string($thing) ){
+
+			if( \class_exists($thing) ){
+				$thing = $this->make($thing);
+			}
+
+			elseif( \preg_match("/^(.+)@(.+)$/", $thing, $match) ){
+				if( \class_exists($match[1]) ){
+					$thing = [$this->make($match[1]), $match[2]];
+				}
+			}
+		}
+
+		if( !\is_callable($thing) ){
+			throw new CallableResolutionException("Cannot make callable");
+		}
+
+		return $thing;
+	}
+
+	/**
+	 * Call a callable with optional given parameters.
+	 *
+	 * @param callable $callable
+	 * @param array<string,mixed> $parameters Additional named parameters and values to use during dependency resolution.
+	 * @return mixed
+	 */
+	public function call(callable $callable, array $parameters = [])
+	{
+		$args = $this->resolveReflectionParameters(
+			$this->getReflectionParametersForCallable($callable),
+			$parameters
+		);
+
+		return \call_user_func_array($callable, $args);
+	}
+
+	/**
+	 * Make an instance of a class using autowiring with values from the container.
+	 *
+	 * @param string $class_name Fully qualified namespace of class of to make.
+	 * @param array<string,mixed> $parameters Additional named parameters and values to use during dependency resolution.
+	 * @throws ParameterResolutionException
+	 * @throws ClassResolutionException
+	 * @return object
+	 */
+	public function make(string $class_name, array $parameters = []): object
+	{
+		if( $this->container &&
+			$this->container->has($class_name) ){
+			return $this->container->get($class_name);
+		}
+
+		/**
+		 * @psalm-suppress ArgumentTypeCoercion
+		 */
+		$reflectionClass = new ReflectionClass($class_name);
+
+		if( $reflectionClass->isInterface() || $reflectionClass->isAbstract() ){
+			throw new ClassResolutionException("Cannot make an instance of an Interface or Abstract.");
+		}
+
+		$constructor = $reflectionClass->getConstructor();
+
+		if( empty($constructor) ){
+			return $reflectionClass->newInstance();
+		}
+
+		$resolved_arguments = $this->resolveReflectionParameters(
+			$constructor->getParameters(),
+			$parameters
+		);
+
+		return $reflectionClass->newInstanceArgs($resolved_arguments);
 	}
 }

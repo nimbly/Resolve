@@ -31,6 +31,10 @@ Instantiate Resolve with or without a container instance.
 $resolve = new Resolve($container);
 ```
 
+## Use cases
+
+Use in your own project or library when you would like to leverage dependency injection decoupled from a specific `ContainerInterface` implmentation.
+
 ## Make
 
 The `make` method can instantiate any class you may need and resolve the constructor dependencies automatically from either the container instance or the optional parameters you provide.
@@ -53,7 +57,7 @@ $instance_method = $resolve->makeCallable("\Http\Handlers\FooHandler@createNewFo
 
 ## Call
 
-The `call` method will call any `callable` you pass in, collect the dependencies of that callable from either the container or the optional set of parameters passed, and invoke that `callable`.
+The `call` method will call any `callable` you pass in, collect the dependencies of that callable from either the container and the optional set of parameters passed, and invoke that `callable`.
 
 If a dependency cannot be resolved from the container or optional parameters, Resolve will attempt to `make` one for you automatically.
 

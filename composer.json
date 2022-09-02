@@ -5,7 +5,7 @@
 	"keywords": ["autowiring","dependency injection"],
 	"require": {
 		"php": "^8.0",
-		"psr/container": "^2.0"
+		"psr/container": "^1.1"
 	},
 	"require-dev": {
 		"phpunit/phpunit": "^9.0",

@@ -22,31 +22,29 @@ class Resolve
 	/**
 	 * Get the reflection parameters for a callable.
 	 *
-	 * @param callable $handler
+	 * @param callable $callable
 	 * @throws ParameterResolutionException
 	 * @return array<ReflectionParameter>
 	 */
-	public function getReflectionParametersForCallable(callable $handler): array
+	protected function getReflectionParametersForCallable(callable $callable): array
 	{
-		if( \is_array($handler) ){
-			[$class, $method] = $handler;
+		if( \is_array($callable) ){
+			[$class, $method] = $callable;
 
 			$reflectionClass = new ReflectionClass($class);
 			$reflector = $reflectionClass->getMethod($method);
 		}
-
-		elseif( \is_object($handler) && \method_exists($handler, "__invoke")) {
-
-			$reflectionObject = new ReflectionObject($handler);
+		elseif( \is_object($callable) && \method_exists($callable, "__invoke")) {
+			$reflectionObject = new ReflectionObject($callable);
 			$reflector = $reflectionObject->getMethod("__invoke");
 		}
 
-		elseif( \is_string($handler)) {
-			$reflector = new ReflectionFunction($handler);
+		elseif( \is_string($callable)) {
+			$reflector = new ReflectionFunction($callable);
 		}
 
 		else {
-			throw new ParameterResolutionException("Given handler is not callable.");
+			throw new ParameterResolutionException("Given callable is not callable.");
 		}
 
 		return $reflector->getParameters();
@@ -61,13 +59,13 @@ class Resolve
 	 * 		o Try to recursively make() new instances
 	 * 		o Default values provided by method/function signature
 	 *
-	 * @param array<ReflectionParameter> $reflection_parameters
+	 * @param array<ReflectionParameter> $reflection_parameters The parameters from the method/function/callable signature.
 	 * @param array<string,mixed> $parameters Additional named parameters and values to use during dependency resolution.
 	 * @throws ParameterResolutionException
 	 * @throws ClassResolutionException
 	 * @return array<mixed> All resolved parameters in the order they appeared in $reflection_parameters
 	 */
-	public function resolveReflectionParameters(array $reflection_parameters, array $parameters = []): array
+	protected function resolveReflectionParameters(array $reflection_parameters, array $parameters = []): array
 	{
 		return \array_map(
 			/**
@@ -146,7 +144,8 @@ class Resolve
 	 * Try to make a thing callable.
 	 *
 	 * You can pass something that PHP considers "callable" OR a string that represents
-	 * a callable in the format: \Fully\Qualiafied\Namespace@methodName.
+	 * a callable in the format: \Fully\Qualiafied\Namespace@methodName where method name could be an
+	 * instance or static method.
 	 *
 	 * @param string|callable $thing
 	 * @throws ParameterResolutionException
@@ -196,7 +195,7 @@ class Resolve
 	/**
 	 * Make an instance of a class using autowiring with values from the container.
 	 *
-	 * @param string $class_name Fully qualified namespace of class of to make.
+	 * @param string $class_name Fully qualified namespace of class to make.
 	 * @param array<string,mixed> $parameters Additional named parameters and values to use during dependency resolution.
 	 * @throws ParameterResolutionException
 	 * @throws ClassResolutionException

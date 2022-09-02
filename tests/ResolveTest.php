@@ -20,8 +20,11 @@ class ResolveTest extends TestCase
 	public function test_get_reflection_parameters_for_callable_on_array(): void
 	{
 		$resolve = new Resolve;
+		$reflectionClass = new ReflectionClass($resolve);
+		$reflectionMethod = $reflectionClass->getMethod("getReflectionParametersForCallable");
+		$reflectionMethod->setAccessible(true);
 
-		$parameters = $resolve->getReflectionParametersForCallable([new NonConstructorClass, "getEvent"]);
+		$parameters = $reflectionMethod->invoke($resolve, [new NonConstructorClass, "getEvent"]);
 
 		$this->assertCount(2, $parameters);
 
@@ -49,8 +52,11 @@ class ResolveTest extends TestCase
 	public function test_get_reflection_parameters_for_callable_on_invokeable(): void
 	{
 		$resolve = new Resolve;
+		$reflectionClass = new ReflectionClass($resolve);
+		$reflectionMethod = $reflectionClass->getMethod("getReflectionParametersForCallable");
+		$reflectionMethod->setAccessible(true);
 
-		$parameters = $resolve->getReflectionParametersForCallable(new InvokableClass);
+		$parameters = $reflectionMethod->invoke($resolve, new InvokableClass);
 
 		$this->assertCount(2, $parameters);
 
@@ -85,7 +91,11 @@ class ResolveTest extends TestCase
 		};
 
 		$resolve = new Resolve;
-		$parameters = $resolve->getReflectionParametersForCallable("getEvent");
+		$reflectionClass = new ReflectionClass($resolve);
+		$reflectionMethod = $reflectionClass->getMethod("getReflectionParametersForCallable");
+		$reflectionMethod->setAccessible(true);
+
+		$parameters = $reflectionMethod->invoke($resolve, "getEvent");
 
 		$this->assertCount(2, $parameters);
 

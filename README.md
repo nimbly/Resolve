@@ -1,6 +1,8 @@
 # Resolve
 
-Resolve is a dependency resolver able to call functions or methods or make new instances of classes with the aid of a PSR-11 compliant container.
+Resolve is an autowiring and dependency resolver able to call functions or methods or make new instances of classes with the aid of a PSR-11 compliant container.
+
+Use Resolve in your own project or library when you would like to leverage dependency injection decoupled from a specific `ContainerInterface` implmentation.
 
 ## Installation
 
@@ -25,22 +27,21 @@ You can try one of these:
 
 ## Usage
 
-Instantiate Resolve with or without a container instance.
+Instantiate Resolve with or without a PSR-11 container instance.
 
 ```php
 $resolve = new Resolve($container);
 ```
 
-## Use cases
-
-Use in your own project or library when you would like to leverage dependency injection decoupled from a specific `ContainerInterface` implmentation.
-
 ## Make
 
-The `make` method can instantiate any class you may need and resolve the constructor dependencies automatically from either the container instance or the optional parameters you provide.
+The `make` method can instantiate any class you may need and resolve the constructor dependencies automatically from both the container instance and the optional parameters you provide.
 
 ```php
-$instance = $resolve->make(FooHandler::class, ["additional_parameter" => "Foo"]);
+$instance = $resolve->make(
+    FooHandler::class,
+    ["additional_parameter" => "Foo"]
+);
 ```
 
 ## Make a thing callable
@@ -57,7 +58,7 @@ $instance_method = $resolve->makeCallable("\Http\Handlers\FooHandler@createNewFo
 
 ## Call
 
-The `call` method will call any `callable` you pass in, collect the dependencies of that callable from either the container and the optional set of parameters passed, and invoke that `callable`.
+The `call` method will call any `callable` you pass in, resolve the dependencies of that callable from both the container and the optional set of parameters passed, and invoke that `callable`.
 
 If a dependency cannot be resolved from the container or optional parameters, Resolve will attempt to `make` one for you automatically.
 

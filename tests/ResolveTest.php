@@ -3,7 +3,7 @@
 use Carton\Container;
 use Nimbly\Resolve\CallableResolutionException;
 use Nimbly\Resolve\ClassResolutionException;
-use PHPUnit\Framework\TestCase;
+use Nimbly\Resolve\ParameterResolutionException;
 use Nimbly\Resolve\Resolve;
 use Nimbly\Resolve\Tests\Fixtures\ConstructorClass;
 use Nimbly\Resolve\Tests\Fixtures\InvokableClass;
@@ -11,6 +11,7 @@ use Nimbly\Resolve\Tests\Fixtures\NonConstructorClass;
 use Nimbly\Resolve\Tests\Fixtures\StaticMethodClass;
 use Nimbly\Resolve\Tests\Fixtures\TestAbstract;
 use Nimbly\Resolve\Tests\Fixtures\TestInterface;
+use PHPUnit\Framework\TestCase;
 
 /**
  * @covers Nimbly\Resolve\Resolve
@@ -311,5 +312,205 @@ class ResolveTest extends TestCase
 		$this->expectException(ClassResolutionException::class);
 
 		$resolve->make("NonExistentClass");
+	}
+
+
+	public function test_resolve_reflection_parameters_with_primitive_in_user_args(): void
+	{
+		$resolve = new Resolve;
+		$reflectionClass = new ReflectionClass($resolve);
+		$reflectionMethod = $reflectionClass->getMethod("resolveReflectionParameters");
+		$reflectionMethod->setAccessible(true);
+
+		$callable = function(string $firstname, string $lastname): void {
+			echo "{$firstname} {$lastname}";
+		};
+
+		$reflectionFunction = new ReflectionFunction($callable);
+
+		$dependencies = $reflectionMethod->invokeArgs($resolve, [$reflectionFunction->getParameters(), ["firstname" => "Nimbly", "lastname" => "Limber"]]);
+
+		$this->assertEquals(
+			["Nimbly", "Limber"],
+			$dependencies
+		);
+	}
+
+	public function test_resolve_reflection_parameters_with_primitive_using_default_value(): void
+	{
+		$resolve = new Resolve;
+
+		$reflectionClass = new ReflectionClass($resolve);
+		$reflectionMethod = $reflectionClass->getMethod("resolveReflectionParameters");
+		$reflectionMethod->setAccessible(true);
+
+		$callable = function(string $firstname, string $lastname = "Limber"): void {
+			echo "{$firstname} {$lastname}";
+		};
+
+		$reflectionFunction = new ReflectionFunction($callable);
+
+		$dependencies = $reflectionMethod->invokeArgs($resolve, [$reflectionFunction->getParameters(), ["firstname" => "Nimbly"]]);
+
+		$this->assertEquals(
+			["Nimbly", "Limber"],
+			$dependencies
+		);
+	}
+
+	public function test_resolve_reflection_parameters_with_primitive_using_optional_or_allows_null(): void
+	{
+		$resolve = new Resolve;
+
+		$reflectionClass = new ReflectionClass($resolve);
+		$reflectionMethod = $reflectionClass->getMethod("resolveReflectionParameters");
+		$reflectionMethod->setAccessible(true);
+
+		$callable = function(string $firstname, ?string $lastname): void {
+			echo "{$firstname} {$lastname}";
+		};
+
+		$reflectionFunction = new ReflectionFunction($callable);
+
+		$dependencies = $reflectionMethod->invokeArgs($resolve, [$reflectionFunction->getParameters(), ["firstname" => "Nimbly"]]);
+
+		$this->assertEquals(
+			["Nimbly", null],
+			$dependencies
+		);
+	}
+
+	public function test_resolve_reflection_parameters_with_class_using_container(): void
+	{
+		$container = new Container;
+		$container->set(
+			ConstructorClass::class,
+			new ConstructorClass("Nimbly", new DateTime)
+		);
+
+		$resolve = new Resolve($container);
+
+		$reflectionClass = new ReflectionClass($resolve);
+		$reflectionMethod = $reflectionClass->getMethod("resolveReflectionParameters");
+		$reflectionMethod->setAccessible(true);
+
+		$callable = function(ConstructorClass $application): bool {
+			return true;
+		};
+
+		$reflectionFunction = new ReflectionFunction($callable);
+
+		$dependencies = $reflectionMethod->invokeArgs($resolve, [$reflectionFunction->getParameters()]);
+
+		$this->assertEquals(
+			[$container->get(ConstructorClass::class)],
+			$dependencies
+		);
+	}
+
+	public function test_resolve_reflection_parameters_with_making_class_with_constructor(): void
+	{
+		$resolve = new Resolve;
+		$reflectionClass = new ReflectionClass($resolve);
+		$reflectionMethod = $reflectionClass->getMethod("resolveReflectionParameters");
+		$reflectionMethod->setAccessible(true);
+
+		$callable = function(ConstructorClass $class): void {
+			echo $class->getEvent();
+		};
+
+		$reflectionFunction = new ReflectionFunction($callable);
+
+		$dependencies = $reflectionMethod->invokeArgs(
+			$resolve,
+			[
+				$reflectionFunction->getParameters(),
+				[
+					"name" => ":name:",
+					"date" => new DateTime
+				]
+			]
+		);
+
+		$this->assertInstanceOf(
+			ConstructorClass::class,
+			$dependencies[0]
+		);
+	}
+
+	public function test_resolve_reflection_parameters_with_non_reflection_named_type_throws_parameter_resolution_exception(): void
+	{
+		$resolve = new Resolve;
+
+		$reflectionClass = new ReflectionClass($resolve);
+		$reflectionMethod = $reflectionClass->getMethod("resolveReflectionParameters");
+		$reflectionMethod->setAccessible(true);
+
+		$callable = function(DateTime|DateTimeImmutable $dateTime): void {
+			echo "The date is now: " . $dateTime;
+		};
+
+		$reflectionFunction = new ReflectionFunction($callable);
+
+		$this->expectException(ParameterResolutionException::class);
+		$reflectionMethod->invokeArgs($resolve, [$reflectionFunction->getParameters()]);
+	}
+
+	public function test_resolve_reflection_parameters_with_unmakeable_throws_parameter_resolution_exception(): void
+	{
+		$resolve = new Resolve;
+
+		$reflectionClass = new ReflectionClass($resolve);
+		$reflectionMethod = $reflectionClass->getMethod("resolveReflectionParameters");
+		$reflectionMethod->setAccessible(true);
+
+		$callable = function(ConstructorClass $request): void {
+			echo "Hello world!";
+		};
+
+		$reflectionFunction = new ReflectionFunction($callable);
+
+		$this->expectException(ParameterResolutionException::class);
+		$reflectionMethod->invokeArgs($resolve, [$reflectionFunction->getParameters()]);
+	}
+
+	public function test_resolve_reflection_parameters_with_unresolvable_throws_parameter_resolution_exception(): void
+	{
+		$resolve = new Resolve;
+
+		$reflectionClass = new ReflectionClass($resolve);
+		$reflectionMethod = $reflectionClass->getMethod("resolveReflectionParameters");
+		$reflectionMethod->setAccessible(true);
+
+		$callable = function(string $dateTime): void {
+			echo "The date is now: " . $dateTime;
+		};
+
+		$reflectionFunction = new ReflectionFunction($callable);
+
+		$this->expectException(ParameterResolutionException::class);
+		$reflectionMethod->invokeArgs($resolve, [$reflectionFunction->getParameters()]);
+	}
+
+	public function test_resolve_reflection_parameters_with_default_values(): void
+	{
+		$resolve = new Resolve;
+
+		$reflectionClass = new ReflectionClass($resolve);
+		$reflectionMethod = $reflectionClass->getMethod("resolveReflectionParameters");
+		$reflectionMethod->setAccessible(true);
+
+		$callable = function(string $option = "opt1", ?string $option2 = null): void {
+			echo "Hello world with " . $option;
+		};
+
+		$reflectionFunction = new ReflectionFunction($callable);
+
+		$parameters = $reflectionMethod->invokeArgs($resolve, [$reflectionFunction->getParameters()]);
+
+		$this->assertEquals(
+			["opt1", null],
+			$parameters
+		);
 	}
 }

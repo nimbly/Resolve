@@ -1,5 +1,5 @@
 [![Latest Stable Version](https://img.shields.io/packagist/v/nimbly/resolve.svg?style=flat-square)](https://packagist.org/packages/nimbly/Resolve)
-[![Build Status](https://img.shields.io/travis/nimbly/Resolve.svg?style=flat-square)](https://travis-ci.com/nimbly/Resolve)
+[![Build Status](https://img.shields.io/travis/nimbly/Resolve.svg?style=flat-square)](https://app.travis-ci.com/nimbly/Resolve)
 [![Code Coverage](https://img.shields.io/coveralls/github/nimbly/Resolve.svg?style=flat-square)](https://coveralls.io/github/nimbly/Resolve)
 [![License](https://img.shields.io/github/license/nimbly/Resolve.svg?style=flat-square)](https://packagist.org/packages/nimbly/Resolve)
 

@@ -2,8 +2,6 @@
 
 namespace Nimbly\Resolve;
 
-use Nimbly\Resolve\ClassResolutionException;
-use Nimbly\Resolve\ParameterResolutionException;
 use Psr\Container\ContainerInterface;
 use ReflectionClass;
 use ReflectionException;
@@ -11,19 +9,14 @@ use ReflectionFunction;
 use ReflectionObject;
 use ReflectionParameter;
 
-class Resolve
+trait Resolve
 {
-	public function __construct(
-		protected ?ContainerInterface $container = null
-	)
-	{
-	}
-
 	/**
 	 * Get the reflection parameters for a callable.
 	 *
 	 * @param callable $callable
 	 * @throws ParameterResolutionException
+	 * @throws ReflectionException
 	 * @return array<ReflectionParameter>
 	 */
 	protected function getReflectionParametersForCallable(callable $callable): array
@@ -44,7 +37,7 @@ class Resolve
 		}
 
 		else {
-			throw new ParameterResolutionException("Given callable is not callable.");
+			throw new ParameterResolutionException("Unknown callable type.");
 		}
 
 		return $reflector->getParameters();
@@ -60,18 +53,19 @@ class Resolve
 	 * 		o Default values provided by method/function signature
 	 *
 	 * @param array<ReflectionParameter> $reflection_parameters The parameters from the method/function/callable signature.
+	 * @param ContainerInterface|null $container ContainerInterface instance.
 	 * @param array<string,mixed> $parameters Additional named parameters and values to use during dependency resolution.
 	 * @throws ParameterResolutionException
 	 * @throws ClassResolutionException
 	 * @return array<mixed> All resolved parameters in the order they appeared in $reflection_parameters
 	 */
-	protected function resolveReflectionParameters(array $reflection_parameters, array $parameters = []): array
+	protected function resolveReflectionParameters(array $reflection_parameters, ?ContainerInterface $container = null, array $parameters = []): array
 	{
 		return \array_map(
 			/**
 			 * @return mixed
 			 */
-			function(ReflectionParameter $reflectionParameter) use ($parameters) {
+			function(ReflectionParameter $reflectionParameter) use ($container, $parameters) {
 
 				$parameter_name = $reflectionParameter->getName();
 
@@ -91,8 +85,8 @@ class Resolve
 				 */
 				if( !$parameter_type->isBuiltin() ) {
 
-					if( $this->container && $this->container->has($parameter_type->getName()) ){
-						return $this->container->get($parameter_type->getName());
+					if( $container && $container->has($parameter_type->getName()) ){
+						return $container->get($parameter_type->getName());
 					}
 
 					// Try to find in the parameters supplied
@@ -114,6 +108,7 @@ class Resolve
 
 						return $this->make(
 							$parameter_type->getName(),
+							$container,
 							$parameters
 						);
 					}
@@ -145,47 +140,59 @@ class Resolve
 	 *
 	 * You can pass something that PHP considers "callable" OR a string that represents
 	 * a callable in the format: \Fully\Qualiafied\Namespace@methodName where method name could be an
-	 * instance or static method.
+	 * instance or static method OR an invokable class name.
 	 *
 	 * @param string|callable $thing
+	 * @param ContainerInterface|null $container
+	 * @param array<string,mixed> $parameters
 	 * @throws ParameterResolutionException
 	 * @throws ClassResolutionException
 	 * @throws CallableResolutionException
 	 * @return callable
 	 */
-	public function makeCallable(string|callable $thing): callable
+	protected function makeCallable(string|callable $thing, ?ContainerInterface $container = null, array $parameters = []): callable
 	{
-		if( \is_string($thing) ){
+		if( \is_callable($thing) ){
+			return $thing;
+		}
 
-			if( \class_exists($thing) ){
-				$thing = $this->make($thing);
-			}
+		$callable_thing = $thing;
 
-			elseif( \preg_match("/^(.+)@(.+)$/", $thing, $match) ){
-				if( \class_exists($match[1]) ){
-					$thing = [$this->make($match[1]), $match[2]];
-				}
+		if( \class_exists($thing) ){
+			$callable_thing = $this->make($thing, $container, $parameters);
+		}
+
+		elseif( \preg_match("/^(.+)@(.+)$/", $thing, $match) ){
+			if( \class_exists($match[1]) ){
+				$callable_thing = [$this->make($match[1], $container, $parameters), $match[2]];
 			}
 		}
 
-		if( !\is_callable($thing) ){
-			throw new CallableResolutionException("Cannot make callable");
+		if( !\is_callable($callable_thing) ){
+			throw new CallableResolutionException(
+				\sprintf(
+					"Cannot make %s callable.",
+					$thing
+				)
+			);
 		}
 
-		return $thing;
+		return $callable_thing;
 	}
 
 	/**
-	 * Call a callable with optional given parameters.
+	 * Call a callable with values from the container (if any) and optional given parameters.
 	 *
 	 * @param callable $callable
 	 * @param array<string,mixed> $parameters Additional named parameters and values to use during dependency resolution.
+	 * @throws ParameterResolutionException
 	 * @return mixed
 	 */
-	public function call(callable $callable, array $parameters = [])
+	protected function call(callable $callable, ?ContainerInterface $container = null, array $parameters = [])
 	{
 		$args = $this->resolveReflectionParameters(
 			$this->getReflectionParametersForCallable($callable),
+			$container,
 			$parameters
 		);
 
@@ -195,17 +202,17 @@ class Resolve
 	/**
 	 * Make an instance of a class using autowiring with values from the container.
 	 *
-	 * @param string $class_name Fully qualified namespace of class to make.
+	 * @param string $class_name Fully qualified name of class to make.
+	 * @param ContainerInterface|null $container Container instance to be used in dependency resolution.
 	 * @param array<string,mixed> $parameters Additional named parameters and values to use during dependency resolution.
 	 * @throws ParameterResolutionException
 	 * @throws ClassResolutionException
 	 * @return object
 	 */
-	public function make(string $class_name, array $parameters = []): object
+	protected function make(string $class_name, ?ContainerInterface $container = null, array $parameters = []): object
 	{
-		if( $this->container &&
-			$this->container->has($class_name) ){
-			return $this->container->get($class_name);
+		if( $container && $container->has($class_name) ){
+			return $container->get($class_name);
 		}
 
 		try {
@@ -217,14 +224,14 @@ class Resolve
 		}
 		catch( ReflectionException $reflectionException ){
 			throw new ClassResolutionException(
-				$reflectionException->getMessage(),
-				$reflectionException->getCode(),
+				"Failed to get reflection on \"" . $class_name . "\".",
+				0,
 				$reflectionException
 			);
 		}
 
 		if( $reflectionClass->isInterface() || $reflectionClass->isAbstract() ){
-			throw new ClassResolutionException("Cannot make an instance of an Interface or Abstract.");
+			throw new ClassResolutionException("Cannot make \"" . $class_name . "\" as it is either an Interface or Abstract.");
 		}
 
 		$constructor = $reflectionClass->getConstructor();
@@ -235,6 +242,7 @@ class Resolve
 
 		$resolved_arguments = $this->resolveReflectionParameters(
 			$constructor->getParameters(),
+			$container,
 			$parameters
 		);
 

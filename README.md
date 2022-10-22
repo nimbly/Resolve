@@ -5,7 +5,7 @@
 
 # Resolve
 
-Resolve is an autowiring and dependency resolver able to call functions or methods or make new instances of classes with the aid of a PSR-11 compliant container.
+Resolve is an autowiring and dependency resolver trait able to call functions or methods or make new instances of classes with (or without) the aid of a PSR-11 compliant container.
 
 Use Resolve in your own project or library when you would like to leverage dependency injection decoupled from a specific `ContainerInterface` implmentation.
 
@@ -32,19 +32,42 @@ You can try one of these:
 
 ## Usage
 
-Instantiate Resolve with or without a PSR-11 container instance.
+Add the `Resolve` trait to anything you would like to add dependency injection capabilities to.
 
 ```php
-$resolve = new Resolve($container);
+class Dispatcher
+{
+    use Resolve;
+
+    public function __construct(
+        protected Router $router,
+        protected ContainterInterface $container)
+    {
+    }
+
+    public function dispatch(ServerRequestInterface $request): ResponseInterface
+    {
+        $route = $this->router->resolve($request);
+
+        $handler = $this->makeCallable($route->getHandler());
+
+        return $this->call(
+            $handler,
+            $this->container,
+            [ServerRequestInterface::class => $request]
+        );
+    }
+}
 ```
 
 ## Make
 
-The `make` method can instantiate any class you may need and resolve the constructor dependencies automatically from both the container instance and the optional parameters you provide.
+The `make` method can instantiate any class you may need and resolve the constructor dependencies automatically from both the container instance (if one was provided) and the optional parameters you provide.
 
 ```php
-$instance = $resolve->make(
+$instance = $this->make(
     FooHandler::class,
+    $this->container,
     ["additional_parameter" => "Foo"]
 );
 ```
@@ -53,12 +76,17 @@ $instance = $resolve->make(
 
 Often you would like to make something that represents a callable into an actual `callable` type. You can pass a string that represents a callable or an actual `callable` into the `makeCallable` method.
 
-```php
-$invokable = $resolve->makeCallable(Foo::class);
-```
 
 ```php
-$instance_method = $resolve->makeCallable("\Http\Handlers\FooHandler@createNewFoo");
+// An invokable class.
+$invokable = $this->makeCallable(Foo::class, $this->container);
+```
+
+You can pass in a fully qualified class namespace, an `@` symbol, and the method name. For example:
+
+```php
+// A class and method name string.
+$instance_method = $this->makeCallable("\App\Http\Handlers\FooHandler@createNewFoo");
 ```
 
 ## Call
@@ -67,13 +95,16 @@ The `call` method will call any `callable` you pass in, resolve the dependencies
 
 If a dependency cannot be resolved from the container or optional parameters, Resolve will attempt to `make` one for you automatically.
 
+If making the dependecy fails or is not possible, an exception will be thrown.
+
 ## Callable types
 
 ### Instance method
 
 ```php
-$resolve->call(
+$this->call(
 	[new FooHandler, "findById"],
+    $this->container,
 	[
 		ServerRequestInteface::class => $serverRequest,
 		"id" => "3122accd-e640-4c4c-b299-ccad074cb077"
@@ -83,8 +114,9 @@ $resolve->call(
 ### Static method
 
 ```php
-$resolve->call(
+$this->call(
 	[FooHandler::class, "findById"],
+    $this->container,
 	[
 		ServerRequestInteface::class => $serverRequest,
 		"id" => "3122accd-e640-4c4c-b299-ccad074cb077"
@@ -95,8 +127,9 @@ $resolve->call(
 ### Invokable
 
 ```php
-$resolve->call(
+$this->call(
 	new FooHandler,
+    $this->container,
 	[
 		ServerRequestInteface::class => $serverRequest,
 		"id" => "3122accd-e640-4c4c-b299-ccad074cb077"
@@ -107,8 +140,9 @@ $resolve->call(
 ### Function
 
 ```php
-$resolve->call(
+$this->call(
 	"\Handlers\Foo\findById",
+    $this->container,
 	[
 		ServerRequestInteface::class => $serverRequest,
 		"id" => "3122accd-e640-4c4c-b299-ccad074cb077"

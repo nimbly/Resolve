@@ -20,7 +20,10 @@ class ResolveTest extends TestCase
 {
 	public function test_get_reflection_parameters_for_callable_on_array(): void
 	{
-		$resolve = new Resolve;
+		$resolve = new class {
+			use Resolve;
+		};
+
 		$reflectionClass = new ReflectionClass($resolve);
 		$reflectionMethod = $reflectionClass->getMethod("getReflectionParametersForCallable");
 		$reflectionMethod->setAccessible(true);
@@ -52,7 +55,10 @@ class ResolveTest extends TestCase
 
 	public function test_get_reflection_parameters_for_callable_on_invokeable(): void
 	{
-		$resolve = new Resolve;
+		$resolve = new class {
+			use Resolve;
+		};
+
 		$reflectionClass = new ReflectionClass($resolve);
 		$reflectionMethod = $reflectionClass->getMethod("getReflectionParametersForCallable");
 		$reflectionMethod->setAccessible(true);
@@ -91,7 +97,10 @@ class ResolveTest extends TestCase
 			];
 		};
 
-		$resolve = new Resolve;
+		$resolve = new class {
+			use Resolve;
+		};
+
 		$reflectionClass = new ReflectionClass($resolve);
 		$reflectionMethod = $reflectionClass->getMethod("getReflectionParametersForCallable");
 		$reflectionMethod->setAccessible(true);
@@ -123,12 +132,17 @@ class ResolveTest extends TestCase
 
 	public function test_call_on_array_callable(): void
 	{
-		$resolve = new Resolve(
-			new Container
-		);
+		$resolve = new class {
+			use Resolve;
+		};
 
-		$event = $resolve->call(
+		$reflectionClass = new ReflectionClass($resolve);
+		$reflectionMethod = $reflectionClass->getMethod("call");
+		$reflectionMethod->setAccessible(true);
+		$event = $reflectionMethod->invoke(
+			$resolve,
 			[new NonConstructorClass, "getEvent"],
+			new Container,
 			["name" => "My Event", "start_at" => new DateTime("Jan 1, 2020")]
 		);
 
@@ -143,12 +157,17 @@ class ResolveTest extends TestCase
 
 	public function test_call_on_invokable_class(): void
 	{
-		$resolve = new Resolve(
-			new Container
-		);
+		$resolve = new class {
+			use Resolve;
+		};
 
-		$event = $resolve->call(
+		$reflectionClass = new ReflectionClass($resolve);
+		$reflectionMethod = $reflectionClass->getMethod("call");
+		$reflectionMethod->setAccessible(true);
+		$event = $reflectionMethod->invoke(
+			$resolve,
 			new InvokableClass,
+			new Container,
 			["name" => "My Event", "start_at" => new DateTime("Jan 1, 2020")]
 		);
 
@@ -163,12 +182,17 @@ class ResolveTest extends TestCase
 
 	public function test_call_on_static_method(): void
 	{
-		$resolve = new Resolve(
-			new Container
-		);
+		$resolve = new class {
+			use Resolve;
+		};
 
-		$event = $resolve->call(
+		$reflectionClass = new ReflectionClass($resolve);
+		$reflectionMethod = $reflectionClass->getMethod("call");
+		$reflectionMethod->setAccessible(true);
+		$event = $reflectionMethod->invoke(
+			$resolve,
 			[StaticMethodClass::class, "getEvent"],
+			new Container,
 			["name" => "My Event", "start_at" => new DateTime("Jan 1, 2020")]
 		);
 
@@ -183,12 +207,17 @@ class ResolveTest extends TestCase
 
 	public function test_call_on_function(): void
 	{
-		$resolve = new Resolve(
-			new Container
-		);
+		$resolve = new class {
+			use Resolve;
+		};
 
-		$value = $resolve->call(
+		$reflectionClass = new ReflectionClass($resolve);
+		$reflectionMethod = $reflectionClass->getMethod("call");
+		$reflectionMethod->setAccessible(true);
+		$value = $reflectionMethod->invoke(
+			$resolve,
 			"strtolower",
+			new Container,
 			[
 				"string" => "RESOLVE" // PHP >= 8.0 support
 			]
@@ -202,36 +231,70 @@ class ResolveTest extends TestCase
 
 	public function test_make_callable_invokable(): void
 	{
-		$resolve = new Resolve;
+		$resolve = new class {
+			use Resolve;
+		};
 
-		$callable = $resolve->makeCallable(InvokableClass::class);
+		$reflectionClass = new ReflectionClass($resolve);
+		$reflectionMethod = $reflectionClass->getMethod("makeCallable");
+		$reflectionMethod->setAccessible(true);
+		$callable = $reflectionMethod->invoke(
+			$resolve,
+			InvokableClass::class
+		);
 
 		$this->assertIsCallable($callable);
 	}
 
 	public function test_make_callable_instance_method(): void
 	{
-		$resolve = new Resolve;
+		$resolve = new class {
+			use Resolve;
+		};
 
-		$callable = $resolve->makeCallable(NonConstructorClass::class . "@getEvent");
+		$reflectionClass = new ReflectionClass($resolve);
+		$reflectionMethod = $reflectionClass->getMethod("makeCallable");
+		$reflectionMethod->setAccessible(true);
+		$callable = $reflectionMethod->invoke(
+			$resolve,
+			NonConstructorClass::class . "@getEvent"
+		);
 
 		$this->assertIsCallable($callable);
 	}
 
 	public function test_non_callable_string_throws_callable_resolution_exception(): void
 	{
-		$resolve = new Resolve;
+		$resolve = new class {
+			use Resolve;
+		};
+
+		$reflectionClass = new ReflectionClass($resolve);
+		$reflectionMethod = $reflectionClass->getMethod("makeCallable");
+		$reflectionMethod->setAccessible(true);
+
 		$this->expectException(CallableResolutionException::class);
-		$callable = $resolve->makeCallable(NonConstructorClass::class . "@notAMethod");
+		$callable = $reflectionMethod->invoke(
+			$resolve,
+			NonConstructorClass::class . "@notAMethod"
+		);
 	}
 
 	public function test_callable_passes_through(): void
 	{
-		$resolve = new Resolve;
+		$resolve = new class {
+			use Resolve;
+		};
 
 		$input = [new NonConstructorClass, "getEvent"];
 
-		$callable = $resolve->makeCallable($input);
+		$reflectionClass = new ReflectionClass($resolve);
+		$reflectionMethod = $reflectionClass->getMethod("makeCallable");
+		$reflectionMethod->setAccessible(true);
+		$callable = $reflectionMethod->invoke(
+			$resolve,
+			$input
+		);
 
 		$this->assertIsCallable($callable);
 		$this->assertSame($input, $callable);
@@ -247,9 +310,18 @@ class ResolveTest extends TestCase
 			$instance
 		);
 
-		$resolve = new Resolve($container);
+		$resolve = new class {
+			use Resolve;
+		};
 
-		$resolved_instance = $resolve->make(ConstructorClass::class);
+		$reflectionClass = new ReflectionClass($resolve);
+		$reflectionMethod = $reflectionClass->getMethod("make");
+		$reflectionMethod->setAccessible(true);
+		$resolved_instance = $reflectionMethod->invoke(
+			$resolve,
+			ConstructorClass::class,
+			$container
+		);
 
 		$this->assertSame(
 			$instance,
@@ -259,27 +331,51 @@ class ResolveTest extends TestCase
 
 	public function test_make_with_interface_throws_class_resolution_exception(): void
 	{
-		$resolve = new Resolve;
+		$resolve = new class {
+			use Resolve;
+		};
+
+		$reflectionClass = new ReflectionClass($resolve);
+		$reflectionMethod = $reflectionClass->getMethod("make");
+		$reflectionMethod->setAccessible(true);
 
 		$this->expectException(ClassResolutionException::class);
-
-		$resolve->make(TestInterface::class);
+		$instance = $reflectionMethod->invoke(
+			$resolve,
+			TestInterface::class
+		);
 	}
 
 	public function test_make_with_abstract_throws_class_resolution_exception(): void
 	{
-		$resolve = new Resolve;
+		$resolve = new class {
+			use Resolve;
+		};
+
+		$reflectionClass = new ReflectionClass($resolve);
+		$reflectionMethod = $reflectionClass->getMethod("make");
+		$reflectionMethod->setAccessible(true);
 
 		$this->expectException(ClassResolutionException::class);
-
-		$resolve->make(TestAbstract::class);
+		$instance = $reflectionMethod->invoke(
+			$resolve,
+			TestAbstract::class
+		);
 	}
 
 	public function test_make_with_no_constructor(): void
 	{
-		$resolve = new Resolve;
+		$resolve = new class {
+			use Resolve;
+		};
 
-		$instance = $resolve->make(NonConstructorClass::class);
+		$reflectionClass = new ReflectionClass($resolve);
+		$reflectionMethod = $reflectionClass->getMethod("make");
+		$reflectionMethod->setAccessible(true);
+		$instance = $reflectionMethod->invoke(
+			$resolve,
+			NonConstructorClass::class
+		);
 
 		$this->assertInstanceOf(
 			NonConstructorClass::class,
@@ -289,10 +385,17 @@ class ResolveTest extends TestCase
 
 	public function test_make_with_constructor(): void
 	{
-		$resolve = new Resolve;
+		$resolve = new class {
+			use Resolve;
+		};
 
-		$instance = $resolve->make(
+		$reflectionClass = new ReflectionClass($resolve);
+		$reflectionMethod = $reflectionClass->getMethod("make");
+		$reflectionMethod->setAccessible(true);
+		$instance = $reflectionMethod->invoke(
+			$resolve,
 			ConstructorClass::class,
+			new Container,
 			[
 				"name" => "Foo",
 				"start_at" => new DateTime
@@ -307,17 +410,28 @@ class ResolveTest extends TestCase
 
 	public function test_make_on_non_existent_class_throws_class_resolution_exception(): void
 	{
-		$resolve = new Resolve;
+		$resolve = new class {
+			use Resolve;
+		};
+
+		$reflectionClass = new ReflectionClass($resolve);
+		$reflectionMethod = $reflectionClass->getMethod("make");
+		$reflectionMethod->setAccessible(true);
 
 		$this->expectException(ClassResolutionException::class);
-
-		$resolve->make("NonExistentClass");
+		$instance = $reflectionMethod->invoke(
+			$resolve,
+			"NonExistentClass"
+		);
 	}
 
 
 	public function test_resolve_reflection_parameters_with_primitive_in_user_args(): void
 	{
-		$resolve = new Resolve;
+		$resolve = new class {
+			use Resolve;
+		};
+
 		$reflectionClass = new ReflectionClass($resolve);
 		$reflectionMethod = $reflectionClass->getMethod("resolveReflectionParameters");
 		$reflectionMethod->setAccessible(true);
@@ -328,7 +442,7 @@ class ResolveTest extends TestCase
 
 		$reflectionFunction = new ReflectionFunction($callable);
 
-		$dependencies = $reflectionMethod->invokeArgs($resolve, [$reflectionFunction->getParameters(), ["firstname" => "Nimbly", "lastname" => "Limber"]]);
+		$dependencies = $reflectionMethod->invokeArgs($resolve, [$reflectionFunction->getParameters(), null, ["firstname" => "Nimbly", "lastname" => "Limber"]]);
 
 		$this->assertEquals(
 			["Nimbly", "Limber"],
@@ -338,7 +452,9 @@ class ResolveTest extends TestCase
 
 	public function test_resolve_reflection_parameters_with_primitive_using_default_value(): void
 	{
-		$resolve = new Resolve;
+		$resolve = new class {
+			use Resolve;
+		};
 
 		$reflectionClass = new ReflectionClass($resolve);
 		$reflectionMethod = $reflectionClass->getMethod("resolveReflectionParameters");
@@ -350,7 +466,7 @@ class ResolveTest extends TestCase
 
 		$reflectionFunction = new ReflectionFunction($callable);
 
-		$dependencies = $reflectionMethod->invokeArgs($resolve, [$reflectionFunction->getParameters(), ["firstname" => "Nimbly"]]);
+		$dependencies = $reflectionMethod->invokeArgs($resolve, [$reflectionFunction->getParameters(), null, ["firstname" => "Nimbly"]]);
 
 		$this->assertEquals(
 			["Nimbly", "Limber"],
@@ -360,7 +476,9 @@ class ResolveTest extends TestCase
 
 	public function test_resolve_reflection_parameters_with_primitive_using_optional_or_allows_null(): void
 	{
-		$resolve = new Resolve;
+		$resolve = new class {
+			use Resolve;
+		};
 
 		$reflectionClass = new ReflectionClass($resolve);
 		$reflectionMethod = $reflectionClass->getMethod("resolveReflectionParameters");
@@ -372,7 +490,7 @@ class ResolveTest extends TestCase
 
 		$reflectionFunction = new ReflectionFunction($callable);
 
-		$dependencies = $reflectionMethod->invokeArgs($resolve, [$reflectionFunction->getParameters(), ["firstname" => "Nimbly"]]);
+		$dependencies = $reflectionMethod->invokeArgs($resolve, [$reflectionFunction->getParameters(), null, ["firstname" => "Nimbly"]]);
 
 		$this->assertEquals(
 			["Nimbly", null],
@@ -388,7 +506,9 @@ class ResolveTest extends TestCase
 			new ConstructorClass("Nimbly", new DateTime)
 		);
 
-		$resolve = new Resolve($container);
+		$resolve = new class {
+			use Resolve;
+		};
 
 		$reflectionClass = new ReflectionClass($resolve);
 		$reflectionMethod = $reflectionClass->getMethod("resolveReflectionParameters");
@@ -400,7 +520,7 @@ class ResolveTest extends TestCase
 
 		$reflectionFunction = new ReflectionFunction($callable);
 
-		$dependencies = $reflectionMethod->invokeArgs($resolve, [$reflectionFunction->getParameters()]);
+		$dependencies = $reflectionMethod->invokeArgs($resolve, [$reflectionFunction->getParameters(), $container]);
 
 		$this->assertEquals(
 			[$container->get(ConstructorClass::class)],
@@ -410,7 +530,10 @@ class ResolveTest extends TestCase
 
 	public function test_resolve_reflection_parameters_with_making_class_with_constructor(): void
 	{
-		$resolve = new Resolve;
+		$resolve = new class {
+			use Resolve;
+		};
+
 		$reflectionClass = new ReflectionClass($resolve);
 		$reflectionMethod = $reflectionClass->getMethod("resolveReflectionParameters");
 		$reflectionMethod->setAccessible(true);
@@ -425,6 +548,7 @@ class ResolveTest extends TestCase
 			$resolve,
 			[
 				$reflectionFunction->getParameters(),
+				null,
 				[
 					"name" => ":name:",
 					"date" => new DateTime
@@ -440,7 +564,9 @@ class ResolveTest extends TestCase
 
 	public function test_resolve_reflection_parameters_with_non_reflection_named_type_throws_parameter_resolution_exception(): void
 	{
-		$resolve = new Resolve;
+		$resolve = new class {
+			use Resolve;
+		};
 
 		$reflectionClass = new ReflectionClass($resolve);
 		$reflectionMethod = $reflectionClass->getMethod("resolveReflectionParameters");
@@ -458,7 +584,9 @@ class ResolveTest extends TestCase
 
 	public function test_resolve_reflection_parameters_with_unmakeable_throws_parameter_resolution_exception(): void
 	{
-		$resolve = new Resolve;
+		$resolve = new class {
+			use Resolve;
+		};
 
 		$reflectionClass = new ReflectionClass($resolve);
 		$reflectionMethod = $reflectionClass->getMethod("resolveReflectionParameters");
@@ -476,7 +604,9 @@ class ResolveTest extends TestCase
 
 	public function test_resolve_reflection_parameters_with_unresolvable_throws_parameter_resolution_exception(): void
 	{
-		$resolve = new Resolve;
+		$resolve = new class {
+			use Resolve;
+		};
 
 		$reflectionClass = new ReflectionClass($resolve);
 		$reflectionMethod = $reflectionClass->getMethod("resolveReflectionParameters");
@@ -494,7 +624,9 @@ class ResolveTest extends TestCase
 
 	public function test_resolve_reflection_parameters_with_default_values(): void
 	{
-		$resolve = new Resolve;
+		$resolve = new class {
+			use Resolve;
+		};
 
 		$reflectionClass = new ReflectionClass($resolve);
 		$reflectionMethod = $reflectionClass->getMethod("resolveReflectionParameters");

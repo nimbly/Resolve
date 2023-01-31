@@ -2,10 +2,10 @@
 	"name": "nimbly/resolve",
 	"description": "A simple PSR-11 compliant autowiring and dependency injector.",
 	"type": "library",
-	"keywords": ["autowiring","dependency injection"],
+	"keywords": ["autowiring","dependency injection", "DI"],
 	"require": {
 		"php": "^8.0",
-		"psr/container": "^1.1"
+		"psr/container": "^1.1||^2.0"
 	},
 	"require-dev": {
 		"phpunit/phpunit": "^9.0",

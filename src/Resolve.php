@@ -6,6 +6,7 @@ use Psr\Container\ContainerInterface;
 use ReflectionClass;
 use ReflectionException;
 use ReflectionFunction;
+use ReflectionNamedType;
 use ReflectionObject;
 use ReflectionParameter;
 
@@ -74,59 +75,71 @@ trait Resolve
 					return $parameters[$parameter_name];
 				}
 
-				$parameter_type = $reflectionParameter->getType();
+				$reflectionType = $reflectionParameter->getType();
 
-				if( $parameter_type instanceof \ReflectionNamedType === false ) {
-					throw new ParameterResolutionException("Cannot resolve union or intersection types");
+				if( empty($reflectionType) ){
+					throw new ParameterResolutionException("Cannot resolve parameter with no type.");
 				}
 
-				/**
-				 * Check container and parameters for a match by type.
-				 */
-				if( !$parameter_type->isBuiltin() ) {
+				if( $reflectionType instanceof \ReflectionIntersectionType ){
+					throw new ParameterResolutionException("Cannot resolve intersection types.");
+				}
+				elseif( $reflectionType instanceof \ReflectionNamedType ){
+					$reflectionType = [$reflectionType];
+				}
+				elseif( $reflectionType instanceof \ReflectionUnionType ){
+					$reflectionType = $reflectionType->getTypes();
+				}
 
-					if( $container && $container->has($parameter_type->getName()) ){
-						return $container->get($parameter_type->getName());
-					}
+				foreach( $reflectionType as $parameter_type ){
+					/**
+					 * Check container and parameters for a match by type.
+					 */
+					if( !$parameter_type->isBuiltin() ) {
 
-					// Try to find in the parameters supplied
-					$match = \array_filter(
-						$parameters,
-						function($parameter) use ($parameter_type): bool {
-							$parameter_type_name = $parameter_type->getName();
-							return $parameter instanceof $parameter_type_name;
+						if( $container && $container->has($parameter_type->getName()) ){
+							return $container->get($parameter_type->getName());
 						}
-					);
 
-					if( $match ){
-						return $match[
-							\array_keys($match)[0]
-						];
-					}
-
-					try {
-
-						return $this->make(
-							$parameter_type->getName(),
-							$container,
-							$parameters
+						// Try to find in the parameters supplied
+						$match = \array_filter(
+							$parameters,
+							function($parameter) use ($parameter_type): bool {
+								$parameter_type_name = $parameter_type->getName();
+								return $parameter instanceof $parameter_type_name;
+							}
 						);
+
+						if( $match ){
+							return $match[
+								\array_keys($match)[0]
+							];
+						}
+
+						try {
+
+							return $this->make(
+								$parameter_type->getName(),
+								$container,
+								$parameters
+							);
+						}
+						catch( \Exception $exception ){}
 					}
-					catch( \Exception $exception ){}
-				}
 
-				/**
-				 * If a default value is defined, use that, including a null value.
-				 */
-				if( $reflectionParameter->isDefaultValueAvailable() ){
-					return $reflectionParameter->getDefaultValue();
-				}
-				elseif( $reflectionParameter->allowsNull() ){
-					return null;
-				}
+					/**
+					 * If a default value is defined, use that, including a null value.
+					 */
+					if( $reflectionParameter->isDefaultValueAvailable() ){
+						return $reflectionParameter->getDefaultValue();
+					}
+					elseif( $reflectionParameter->allowsNull() ){
+						return null;
+					}
 
-				if( !empty($exception) ){
-					throw $exception;
+					if( !empty($exception) ){
+						throw $exception;
+					}
 				}
 
 				throw new ParameterResolutionException("Cannot resolve parameter \"{$parameter_name}\".");

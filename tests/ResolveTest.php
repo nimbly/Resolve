@@ -562,7 +562,7 @@ class ResolveTest extends TestCase
 		);
 	}
 
-	public function test_resolve_reflection_parameters_with_non_reflection_named_type_throws_parameter_resolution_exception(): void
+	public function test_resolve_reflection_parameters_with_union_type(): void
 	{
 		$resolve = new class {
 			use Resolve;
@@ -572,7 +572,37 @@ class ResolveTest extends TestCase
 		$reflectionMethod = $reflectionClass->getMethod("resolveReflectionParameters");
 		$reflectionMethod->setAccessible(true);
 
-		$callable = function(DateTime|DateTimeImmutable $dateTime): void {
+		$callable = function(DateTime|DateTimeImmutable $dateTime): string {
+			return "The date is now: " . $dateTime->format("c");
+		};
+
+		$dateTime = new DateTimeImmutable("2020-01-28T12:00:01-08:00");
+
+		$reflectionFunction = new ReflectionFunction($callable);
+		$result = $reflectionMethod->invoke(
+			$resolve,
+			$reflectionFunction->getParameters(),
+			null,
+			["dateTime" => $dateTime]
+		);
+
+		$this->assertSame(
+			$dateTime,
+			$result[0]
+		);
+	}
+
+	public function test_resolve_reflection_parameters_with_intersection_type_throws_parameter_resolution_exception(): void
+	{
+		$resolve = new class {
+			use Resolve;
+		};
+
+		$reflectionClass = new ReflectionClass($resolve);
+		$reflectionMethod = $reflectionClass->getMethod("resolveReflectionParameters");
+		$reflectionMethod->setAccessible(true);
+
+		$callable = function(DateTime&DateTimeImmutable $dateTime): void {
 			echo "The date is now: " . $dateTime;
 		};
 

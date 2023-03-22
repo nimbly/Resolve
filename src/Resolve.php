@@ -68,83 +68,231 @@ trait Resolve
 			 */
 			function(ReflectionParameter $reflectionParameter) use ($container, $parameters) {
 
-				$parameter_name = $reflectionParameter->getName();
+				$reflectionParameterType = $reflectionParameter->getType();
 
-				// Check user arguments for a match by name.
-				if( \array_key_exists($parameter_name, $parameters) ){
-					return $parameters[$parameter_name];
-				}
-
-				$reflectionType = $reflectionParameter->getType();
-
-				if( empty($reflectionType) ){
-					throw new ParameterResolutionException("Cannot resolve parameter with no type.");
-				}
-
-				if( $reflectionType instanceof \ReflectionIntersectionType ){
+				if( $reflectionParameterType instanceof \ReflectionIntersectionType ){
 					throw new ParameterResolutionException("Cannot resolve intersection types.");
 				}
-				elseif( $reflectionType instanceof \ReflectionNamedType ){
-					$reflectionType = [$reflectionType];
-				}
-				elseif( $reflectionType instanceof \ReflectionUnionType ){
-					$reflectionType = $reflectionType->getTypes();
-				}
 
-				foreach( $reflectionType as $parameter_type ){
-					/**
-					 * Check container and parameters for a match by type.
-					 */
-					if( !$parameter_type->isBuiltin() ) {
-
-						if( $container && $container->has($parameter_type->getName()) ){
-							return $container->get($parameter_type->getName());
-						}
-
-						// Try to find in the parameters supplied
-						$match = \array_filter(
-							$parameters,
-							function($parameter) use ($parameter_type): bool {
-								$parameter_type_name = $parameter_type->getName();
-								return $parameter instanceof $parameter_type_name;
-							}
-						);
-
-						if( $match ){
-							return $match[
-								\array_keys($match)[0]
-							];
-						}
-
-						try {
-
-							return $this->make(
-								$parameter_type->getName(),
-								$container,
-								$parameters
-							);
-						}
-						catch( \Exception $exception ){}
-					}
-
-					/**
-					 * If a default value is defined, use that, including a null value.
-					 */
-					if( $reflectionParameter->isDefaultValueAvailable() ){
-						return $reflectionParameter->getDefaultValue();
-					}
-					elseif( $reflectionParameter->allowsNull() ){
-						return null;
-					}
-
-					if( !empty($exception) ){
-						throw $exception;
-					}
+				elseif( $reflectionParameterType instanceof \ReflectionUnionType ){
+					return $this->resolveReflectionUnionType(
+						$reflectionParameter,
+						$reflectionParameterType,
+						$container,
+						$parameters
+					);
 				}
 
-				throw new ParameterResolutionException("Cannot resolve parameter \"{$parameter_name}\".");
+				elseif( empty($reflectionParameterType) || $reflectionParameterType instanceof \ReflectionNamedType ){
+					return $this->resolveReflectionNamedType(
+						$reflectionParameter,
+						$reflectionParameterType,
+						$container,
+						$parameters
+					);
+				}
+
+				throw new ParameterResolutionException(
+					\sprintf(
+						"Unknown or supported parameter type %s",
+						$reflectionParameterType::class
+					)
+				);
 			},
 			$reflection_parameters
+		);
+	}
+
+	/**
+	 * Try an exact match against user parameters and container.
+	 *
+	 * @param string $parameter_name
+	 * @param ReflectionNamedType|null $reflectionNamedType
+	 * @param ContainerInterface|null $container
+	 * @param array $parameters
+	 * @return mixed
+	 */
+	private function tryExactMatch(
+		string $parameter_name,
+		?ReflectionNamedType $reflectionNamedType = null,
+		?ContainerInterface $container = null,
+		array $parameters = []): mixed
+	{
+		// If there is no type hint or the type is a built-in (string, int, etc) then try and match against name in the container.
+		if( empty($reflectionNamedType) || $reflectionNamedType->isBuiltin() ) {
+
+			// Try an exact match by name against the user parameters.
+			if( \array_key_exists($parameter_name, $parameters) ){
+				return $parameters[$parameter_name];
+			}
+
+			// Check the container
+			if( $container && $container->has($parameter_name)) {
+				return $container->get($parameter_name);
+			}
+		}
+
+		// A type hint was provided that is not a built-in
+		else {
+
+			// Try an exact match by name and type against the user parameters.
+			if( \array_key_exists($parameter_name, $parameters) &&
+				$reflectionNamedType->getName() === $parameters[$parameter_name]::class ){
+				return $parameters[$parameter_name];
+			}
+
+			// Try matching by just type
+			$match = \array_filter(
+				$parameters,
+				function(mixed $parameter) use ($reflectionNamedType): bool {
+					$parameter_type_name = $reflectionNamedType->getName();
+					return $parameter instanceof $parameter_type_name;
+				}
+			);
+
+			if( $match ){
+				return $match[\array_keys($match)[0]];
+			}
+
+			// Try the container by type
+			if( $container && $container->has($reflectionNamedType->getName()) ){
+				return $container->get($reflectionNamedType->getName());
+			}
+		}
+
+		throw new ParameterResolutionException(
+			\sprintf(
+				"Cannot resolve parameter \"%s\".",
+				$parameter_name
+			)
+		);
+	}
+
+	/**
+	 * Try default value matches.
+	 *
+	 * @param ReflectionParameter $reflectionParameter
+	 * @return mixed
+	 */
+	private function tryDefaultValueMatch(ReflectionParameter $reflectionParameter): mixed
+	{
+		if( $reflectionParameter->isDefaultValueAvailable() ){
+			return $reflectionParameter->getDefaultValue();
+		}
+
+		elseif( $reflectionParameter->allowsNull() ){
+			return null;
+		}
+
+		throw new ParameterResolutionException(
+			\sprintf(
+				"Cannot resolve parameter \"%s\".",
+				$reflectionParameter->getName()
+			)
+		);
+	}
+
+	/**
+	 * Resolve a single type.
+	 *
+	 * @param ReflectionParameter $reflectionParameter
+	 * @param ReflectionNamedType|null $reflectionNamedType
+	 * @param ContainerInterface|null $container
+	 * @param array<array-key,mixed> $parameters
+	 * @return mixed
+	 */
+	private function resolveReflectionNamedType(
+		ReflectionParameter $reflectionParameter,
+		?ReflectionNamedType $reflectionNamedType = null,
+		?ContainerInterface $container = null,
+		array $parameters = []): mixed
+	{
+		try {
+
+			return $this->tryExactMatch(
+				$reflectionParameter->getName(),
+				$reflectionNamedType,
+				$container,
+				$parameters
+			);
+		}
+		catch( ParameterResolutionException ){}
+
+		if( $reflectionNamedType && !$reflectionNamedType->isBuiltin() ){
+			try {
+
+				return $this->make(
+					$reflectionNamedType->getName(),
+					$container,
+					$parameters
+				);
+			}
+			catch( ParameterResolutionException|ClassResolutionException ){}
+		}
+
+		return $this->tryDefaultValueMatch(
+			$reflectionParameter
+		);
+	}
+
+	/**
+	 * Resolve a union type.
+	 *
+	 * @param ReflectionParameter $reflectionParameter
+	 * @param \ReflectionUnionType|null $reflectionUnionType
+	 * @param ContainerInterface|null $container
+	 * @param array $parameters
+	 * @return mixed
+	 */
+	private function resolveReflectionUnionType(
+		ReflectionParameter $reflectionParameter,
+		\ReflectionUnionType $reflectionUnionType = null,
+		?ContainerInterface $container = null,
+		array $parameters = []): mixed
+	{
+		foreach( $reflectionUnionType->getTypes() as $reflectionNamedType ){
+			try {
+
+				return $this->tryExactMatch(
+					$reflectionParameter->getName(),
+					$reflectionNamedType,
+					$container,
+					$parameters
+				);
+			}
+			catch( ParameterResolutionException ){}
+		}
+
+		foreach( $reflectionUnionType->getTypes() as $reflectionNamedType ){
+			if( !$reflectionNamedType->isBuiltin() ){
+				try {
+
+					return $this->make(
+						$reflectionNamedType->getName(),
+						$container,
+						$parameters
+					);
+				}
+				catch( ParameterResolutionException|ClassResolutionException ){}
+			}
+		}
+
+		foreach( $reflectionUnionType->getTypes() as $reflectionNamedType ){
+
+			try {
+
+				return $this->tryDefaultValueMatch(
+					$reflectionParameter,
+				);
+			}
+			catch( ParameterResolutionException ){}
+		}
+
+		throw new ParameterResolutionException(
+			\sprintf(
+				"Cannot resolve parameter \"%s\".",
+				$reflectionParameter->getName()
+			)
 		);
 	}
 

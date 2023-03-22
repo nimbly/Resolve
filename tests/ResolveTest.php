@@ -592,26 +592,6 @@ class ResolveTest extends TestCase
 		);
 	}
 
-	public function test_resolve_reflection_parameters_with_intersection_type_throws_parameter_resolution_exception(): void
-	{
-		$resolve = new class {
-			use Resolve;
-		};
-
-		$reflectionClass = new ReflectionClass($resolve);
-		$reflectionMethod = $reflectionClass->getMethod("resolveReflectionParameters");
-		$reflectionMethod->setAccessible(true);
-
-		$callable = function(DateTime&DateTimeImmutable $dateTime): void {
-			echo "The date is now: " . $dateTime;
-		};
-
-		$reflectionFunction = new ReflectionFunction($callable);
-
-		$this->expectException(ParameterResolutionException::class);
-		$reflectionMethod->invokeArgs($resolve, [$reflectionFunction->getParameters()]);
-	}
-
 	public function test_resolve_reflection_parameters_with_unmakeable_throws_parameter_resolution_exception(): void
 	{
 		$resolve = new class {

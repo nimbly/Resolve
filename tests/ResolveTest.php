@@ -425,6 +425,70 @@ class ResolveTest extends TestCase
 		);
 	}
 
+	public function test_resolve_reflection_parameters_with_no_type_hint_and_no_default_value_throws_exception(): void
+	{
+		$resolve = new class {
+			use Resolve;
+		};
+
+		$reflectionClass = new ReflectionClass($resolve);
+		$reflectionMethod = $reflectionClass->getMethod("resolveReflectionParameters");
+		$reflectionMethod->setAccessible(true);
+
+		$callable = function($firstname): string {
+			return "Hello {$firstname}";
+		};
+
+		$reflectionFunction = new ReflectionFunction($callable);
+		$this->expectException(ParameterResolutionException::class);
+		$reflectionMethod->invokeArgs($resolve, [$reflectionFunction->getParameters()]);
+	}
+
+	public function test_resolve_reflection_parameters_with_no_type_hint_and_default_value(): void
+	{
+		$resolve = new class {
+			use Resolve;
+		};
+
+		$reflectionClass = new ReflectionClass($resolve);
+		$reflectionMethod = $reflectionClass->getMethod("resolveReflectionParameters");
+		$reflectionMethod->setAccessible(true);
+
+		$callable = function($firstname = "Nimbly"): string {
+			return "Hello {$firstname}";
+		};
+
+		$reflectionFunction = new ReflectionFunction($callable);
+		$dependencies = $reflectionMethod->invokeArgs($resolve, [$reflectionFunction->getParameters()]);
+
+		$this->assertEquals(
+			"Nimbly",
+			$dependencies[0]
+		);
+	}
+
+	public function test_resolve_reflection_parameters_with_no_type_hint_and_user_provided_values(): void
+	{
+		$resolve = new class {
+			use Resolve;
+		};
+
+		$reflectionClass = new ReflectionClass($resolve);
+		$reflectionMethod = $reflectionClass->getMethod("resolveReflectionParameters");
+		$reflectionMethod->setAccessible(true);
+
+		$callable = function($firstname = "Bob"): string {
+			return "Hello {$firstname}";
+		};
+
+		$reflectionFunction = new ReflectionFunction($callable);
+		$dependencies = $reflectionMethod->invokeArgs($resolve, [$reflectionFunction->getParameters(), null, ["firstname" => "Nimbly"]]);
+
+		$this->assertEquals(
+			"Nimbly",
+			$dependencies[0]
+		);
+	}
 
 	public function test_resolve_reflection_parameters_with_primitive_in_user_args(): void
 	{

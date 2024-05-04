@@ -180,7 +180,7 @@ trait Resolve
 			return $reflectionParameter->getDefaultValue();
 		}
 
-		elseif( $reflectionParameter->allowsNull() ){
+		elseif( $reflectionParameter->getType() !== null && $reflectionParameter->allowsNull() ){
 			return null;
 		}
 
@@ -345,6 +345,7 @@ trait Resolve
 	 * Call a callable with values from the container (if any) and optional given parameters.
 	 *
 	 * @param callable $callable
+	 * @param ContainerInterface|null $container An optional PSR-11 ContainerInterface instance to resolve parameters from.
 	 * @param array<string,mixed> $parameters Additional named parameters and values to use during dependency resolution.
 	 * @throws ParameterResolutionException
 	 * @return mixed
@@ -361,7 +362,7 @@ trait Resolve
 	}
 
 	/**
-	 * Make an instance of a class using autowiring with values from the container.
+	 * Make an instance of a class using autowiring with values from the container and any optional parameters.
 	 *
 	 * @param string $class_name Fully qualified name of class to make.
 	 * @param ContainerInterface|null $container Container instance to be used in dependency resolution.

@@ -60,7 +60,10 @@ trait Resolve
 	 * @throws ClassResolutionException
 	 * @return array<mixed> All resolved parameters in the order they appeared in $reflection_parameters
 	 */
-	protected function resolveReflectionParameters(array $reflection_parameters, ?ContainerInterface $container = null, array $parameters = []): array
+	protected function resolveReflectionParameters(
+		array $reflection_parameters,
+		?ContainerInterface $container = null,
+		array $parameters = []): array
 	{
 		return \array_map(
 			/**
@@ -94,7 +97,7 @@ trait Resolve
 
 				throw new ParameterResolutionException(
 					\sprintf(
-						"Unknown or supported parameter type %s",
+						"Unknown or supported parameter type %s.",
 						$reflectionParameterType::class
 					)
 				);
@@ -162,7 +165,7 @@ trait Resolve
 
 		throw new ParameterResolutionException(
 			\sprintf(
-				"Cannot resolve parameter \"%s\".",
+				"Cannot resolve parameter %s.",
 				$parameter_name
 			)
 		);
@@ -186,7 +189,7 @@ trait Resolve
 
 		throw new ParameterResolutionException(
 			\sprintf(
-				"Cannot resolve parameter \"%s\".",
+				"Cannot resolve parameter: %s.",
 				$reflectionParameter->getName()
 			)
 		);
@@ -246,7 +249,7 @@ trait Resolve
 	 */
 	private function resolveReflectionUnionType(
 		ReflectionParameter $reflectionParameter,
-		\ReflectionUnionType $reflectionUnionType = null,
+		?\ReflectionUnionType $reflectionUnionType = null,
 		?ContainerInterface $container = null,
 		array $parameters = []): mixed
 	{
@@ -290,7 +293,7 @@ trait Resolve
 
 		throw new ParameterResolutionException(
 			\sprintf(
-				"Cannot resolve parameter \"%s\".",
+				"Cannot resolve parameter: %s.",
 				$reflectionParameter->getName()
 			)
 		);
@@ -300,7 +303,7 @@ trait Resolve
 	 * Try to make a thing callable.
 	 *
 	 * You can pass something that PHP considers "callable" OR a string that represents
-	 * a callable in the format: \Fully\Qualiafied\Namespace@methodName where method name could be an
+	 * a callable in the format: \Fully\Qualiafied\Namespace\ClassName@MethodName where method name could be an
 	 * instance or static method OR an invokable class name.
 	 *
 	 * @param string|callable $thing
@@ -311,7 +314,10 @@ trait Resolve
 	 * @throws CallableResolutionException
 	 * @return callable
 	 */
-	protected function makeCallable(string|callable $thing, ?ContainerInterface $container = null, array $parameters = []): callable
+	protected function makeCallable(
+		string|callable $thing,
+		?ContainerInterface $container = null,
+		array $parameters = []): callable
 	{
 		if( \is_callable($thing) ){
 			return $thing;
@@ -332,7 +338,7 @@ trait Resolve
 		if( !\is_callable($callable_thing) ){
 			throw new CallableResolutionException(
 				\sprintf(
-					"Cannot make %s callable.",
+					"Cannot make callable: %s",
 					$thing
 				)
 			);
@@ -350,7 +356,10 @@ trait Resolve
 	 * @throws ParameterResolutionException
 	 * @return mixed
 	 */
-	protected function call(callable $callable, ?ContainerInterface $container = null, array $parameters = [])
+	protected function call(
+		callable $callable,
+		?ContainerInterface $container = null,
+		array $parameters = [])
 	{
 		$args = $this->resolveReflectionParameters(
 			$this->getReflectionParametersForCallable($callable),
@@ -371,7 +380,10 @@ trait Resolve
 	 * @throws ClassResolutionException
 	 * @return object
 	 */
-	protected function make(string $class_name, ?ContainerInterface $container = null, array $parameters = []): object
+	protected function make(
+		string $class_name,
+		?ContainerInterface $container = null,
+		array $parameters = []): object
 	{
 		if( $container && $container->has($class_name) ){
 			return $container->get($class_name);
@@ -386,14 +398,21 @@ trait Resolve
 		}
 		catch( ReflectionException $reflectionException ){
 			throw new ClassResolutionException(
-				"Failed to get reflection on \"" . $class_name . "\".",
-				0,
-				$reflectionException
+				message: \sprintf(
+					"Failed to get reflection on: %s.",
+					$class_name
+				),
+				previous: $reflectionException
 			);
 		}
 
 		if( $reflectionClass->isInterface() || $reflectionClass->isAbstract() ){
-			throw new ClassResolutionException("Cannot make \"" . $class_name . "\" as it is either an Interface or Abstract.");
+			throw new ClassResolutionException(
+				\sprintf(
+					"Cannot make an Interface or Abstract class: %s",
+					$class_name
+				)
+			);
 		}
 
 		$constructor = $reflectionClass->getConstructor();

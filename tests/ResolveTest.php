@@ -1,17 +1,17 @@
 <?php
 
-use Carton\Container;
-use Nimbly\Resolve\CallableResolutionException;
-use Nimbly\Resolve\ClassResolutionException;
-use Nimbly\Resolve\ParameterResolutionException;
 use Nimbly\Resolve\Resolve;
-use Nimbly\Resolve\Tests\Fixtures\ConstructorClass;
-use Nimbly\Resolve\Tests\Fixtures\InvokableClass;
-use Nimbly\Resolve\Tests\Fixtures\NonConstructorClass;
-use Nimbly\Resolve\Tests\Fixtures\StaticMethodClass;
-use Nimbly\Resolve\Tests\Fixtures\TestAbstract;
-use Nimbly\Resolve\Tests\Fixtures\TestInterface;
 use PHPUnit\Framework\TestCase;
+use Nimbly\Resolve\ClassResolutionException;
+use Nimbly\Resolve\Tests\Fixtures\Container;
+use Nimbly\Resolve\CallableResolutionException;
+use Nimbly\Resolve\Tests\Fixtures\TestAbstract;
+use Nimbly\Resolve\ParameterResolutionException;
+use Nimbly\Resolve\Tests\Fixtures\TestInterface;
+use Nimbly\Resolve\Tests\Fixtures\InvokableClass;
+use Nimbly\Resolve\Tests\Fixtures\ConstructorClass;
+use Nimbly\Resolve\Tests\Fixtures\StaticMethodClass;
+use Nimbly\Resolve\Tests\Fixtures\NonConstructorClass;
 
 /**
  * @covers Nimbly\Resolve\Resolve
@@ -142,7 +142,7 @@ class ResolveTest extends TestCase
 		$event = $reflectionMethod->invoke(
 			$resolve,
 			[new NonConstructorClass, "getEvent"],
-			new Container,
+			null,
 			["name" => "My Event", "start_at" => new DateTime("Jan 1, 2020")]
 		);
 
@@ -167,7 +167,7 @@ class ResolveTest extends TestCase
 		$event = $reflectionMethod->invoke(
 			$resolve,
 			new InvokableClass,
-			new Container,
+			null,
 			["name" => "My Event", "start_at" => new DateTime("Jan 1, 2020")]
 		);
 
@@ -192,7 +192,7 @@ class ResolveTest extends TestCase
 		$event = $reflectionMethod->invoke(
 			$resolve,
 			[StaticMethodClass::class, "getEvent"],
-			new Container,
+			null,
 			["name" => "My Event", "start_at" => new DateTime("Jan 1, 2020")]
 		);
 
@@ -217,7 +217,7 @@ class ResolveTest extends TestCase
 		$value = $reflectionMethod->invoke(
 			$resolve,
 			"strtolower",
-			new Container,
+			null,
 			[
 				"string" => "RESOLVE" // PHP >= 8.0 support
 			]
@@ -304,11 +304,7 @@ class ResolveTest extends TestCase
 	{
 		$instance = new ConstructorClass("Foo", new DateTime);
 
-		$container = new Container;
-		$container->set(
-			ConstructorClass::class,
-			$instance
-		);
+		$container = new Container([ConstructorClass::class => $instance]);
 
 		$resolve = new class {
 			use Resolve;
@@ -395,7 +391,7 @@ class ResolveTest extends TestCase
 		$instance = $reflectionMethod->invoke(
 			$resolve,
 			ConstructorClass::class,
-			new Container,
+			null,
 			[
 				"name" => "Foo",
 				"start_at" => new DateTime
@@ -564,10 +560,8 @@ class ResolveTest extends TestCase
 
 	public function test_resolve_reflection_parameters_with_class_using_container(): void
 	{
-		$container = new Container;
-		$container->set(
-			ConstructorClass::class,
-			new ConstructorClass("Nimbly", new DateTime)
+		$container = new Container(
+			[ConstructorClass::class => new ConstructorClass("Nimbly", new DateTime)]
 		);
 
 		$resolve = new class {

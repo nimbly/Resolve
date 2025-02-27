@@ -1,5 +1,5 @@
 [![Latest Stable Version](https://img.shields.io/packagist/v/nimbly/resolve.svg?style=flat-square)](https://packagist.org/packages/nimbly/Resolve)
-[![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/nimbly/resolve/php.yml?style=flat-square)](https://github.com/nimbly/Resolve/actions/workflows/php.yml)
+[![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/nimbly/resolve/coverage.yml?style=flat-square)](https://github.com/nimbly/Resolve/actions/workflows/coverage.yml)
 [![Codecov branch](https://img.shields.io/codecov/c/github/nimbly/resolve/master?style=flat-square)](https://app.codecov.io/github/nimbly/Resolve)
 [![License](https://img.shields.io/github/license/nimbly/Resolve.svg?style=flat-square)](https://packagist.org/packages/nimbly/Resolve)
 

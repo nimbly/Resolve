@@ -112,7 +112,8 @@ trait Resolve
 	 * @param string $parameter_name
 	 * @param ReflectionNamedType|null $reflectionNamedType
 	 * @param ContainerInterface|null $container
-	 * @param array $parameters
+	 * @param array<string,mixed> $parameters
+	 * @throws ParameterResolutionException
 	 * @return mixed
 	 */
 	private function tryExactMatch(
@@ -175,6 +176,7 @@ trait Resolve
 	 * Try default value matches.
 	 *
 	 * @param ReflectionParameter $reflectionParameter
+	 * @throws ParameterResolutionException
 	 * @return mixed
 	 */
 	private function tryDefaultValueMatch(ReflectionParameter $reflectionParameter): mixed
@@ -244,7 +246,8 @@ trait Resolve
 	 * @param ReflectionParameter $reflectionParameter
 	 * @param \ReflectionUnionType|null $reflectionUnionType
 	 * @param ContainerInterface|null $container
-	 * @param array $parameters
+	 * @param array<string,mixed> $parameters
+	 * @throws ParameterResolutionException
 	 * @return mixed
 	 */
 	private function resolveReflectionUnionType(
